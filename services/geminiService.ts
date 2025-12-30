@@ -8,10 +8,13 @@ export async function generateValidCoordinates(
   userLoc: UserLocation,
   rangeKm: RadarRange
 ): Promise<DragonBall[]> {
+  const isGlobal = rangeKm >= 10000;
+  
   const prompt = `
     TASK: Find 7 real-world coordinates for a "treasure hunt" game.
     CENTER: Latitude ${userLoc.lat}, Longitude ${userLoc.lng}
     RADIUS: ${rangeKm}km
+    ${isGlobal ? "MODE: GLOBAL SCAN. Choose 7 iconic public landmarks on different continents (e.g., Eiffel Tower, Statue of Liberty, Great Wall, Opera House, etc.) to represent a worldwide search." : ""}
 
     STRICT CONSTRAINTS:
     1. NO PRIVATE PROPERTY: Locations must be strictly public (public parks, city squares, public monuments, beaches, open hiking trails).

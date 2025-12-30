@@ -7,7 +7,7 @@ import { generateValidCoordinates } from './services/geminiService';
 import RadarUI from './components/RadarUI';
 import { 
   Zap, RefreshCcw, Sun, Moon, Menu as MenuIcon, X, BookOpen, Star, Camera, Shield, 
-  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft
+  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft, Globe
 } from 'lucide-react';
 
 const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
@@ -29,6 +29,7 @@ const RACES = [
 const MapAutoView: React.FC<{ center: [number, number], range: number }> = ({ center, range }) => {
   const map = useMap();
   const zoomLevel = useMemo(() => {
+    if (range >= 10000) return 2; // Niveau monde
     if (range <= 1) return 15;
     if (range <= 10) return 12;
     if (range <= 100) return 9;
@@ -50,7 +51,7 @@ const MapPicker: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({ o
 
 const App: React.FC = () => {
   const [state, setState] = useState<RadarState>(() => {
-    const saved = localStorage.getItem('radar_save_v9');
+    const saved = localStorage.getItem('radar_save_v10');
     const defaultState: RadarState = {
       range: 10,
       userLocation: null,
@@ -78,7 +79,7 @@ const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('radar_save_v9', JSON.stringify(state));
+    localStorage.setItem('radar_save_v10', JSON.stringify(state));
   }, [state]);
 
   useEffect(() => {
@@ -188,6 +189,7 @@ const App: React.FC = () => {
   }, [selectedBall, state.userLocation]);
 
   const currentRadarRange = useMemo(() => {
+    if (state.range >= 10000) return 20000; // Mode monde
     const multipliers = [1, 0.5, 0.2, 0.05];
     return state.range * (multipliers[radarStep] || 1);
   }, [state.range, radarStep]);
@@ -267,7 +269,7 @@ const App: React.FC = () => {
                 <span className="font-black text-sm uppercase">Guide de Survie</span>
               </button>
             </nav>
-            <div className="pt-8 border-t text-[11px] font-mono text-center trackingest opacity-40" style={{ borderColor: `${radarColor}1a` }}>
+            <div className="pt-8 border-t text-[11px] font-mono text-center tracking-widest opacity-40" style={{ borderColor: `${radarColor}1a` }}>
               RACE: {state.currentRace.toUpperCase()}
             </div>
           </div>
@@ -354,21 +356,21 @@ const App: React.FC = () => {
                     </div>
                 </section>
 
-                {/* 4. & 5. Capacités Spéciales */}
+                {/* 4. Capacités Spéciales */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Sparkles size={16} /> 4. & 5. Capacités de Survie
+                        <Sparkles size={16} /> 4. Capacités Spéciales
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('scouter') ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)]' : 'bg-white/5 border-white/10'}`}>
                             <div className="flex justify-between items-start mb-6">
                                 <div className="p-5 bg-black/40 rounded-3xl"><Camera size={36} className={state.unlockedFeatures.includes('scouter') ? 'text-emerald-400' : 'text-white/20'}/></div>
                                 {state.unlockedFeatures.includes('scouter') ? <span className="bg-emerald-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">DISPONIBLE</span>}
                             </div>
                             <h4 className="font-black text-lg mb-2 uppercase">Mode Scouter (AR)</h4>
-                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Vision en réalité augmentée via caméra pour localiser précisément les boules et leur distance.</p>
+                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Vision en réalité augmentée pour localiser précisément les boules.</p>
                             {!state.unlockedFeatures.includes('scouter') && (
-                                <button onClick={() => handleShenronWish('unlock', true, 'scouter')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'bg-white/5 text-white/20 border border-white/5'}`}>Activer ce Vœu</button>
+                                <button onClick={() => handleShenronWish('unlock', true, 'scouter')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>Invoquer</button>
                             )}
                         </div>
 
@@ -378,9 +380,21 @@ const App: React.FC = () => {
                                 {state.unlockedFeatures.includes('custom_zone') ? <span className="bg-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">DISPONIBLE</span>}
                             </div>
                             <h4 className="font-black text-lg mb-2 uppercase">Zone Personnalisée</h4>
-                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Libérez la portée du radar. Choisissez n'importe quel point sur Terre avec une portée libre (> 1km).</p>
+                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Libérez la portée du radar et choisissez votre zone.</p>
                             {!state.unlockedFeatures.includes('custom_zone') && (
-                                <button onClick={() => handleShenronWish('unlock', true, 'custom_zone')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-white/5 text-white/20 border border-white/5'}`}>Activer ce Vœu</button>
+                                <button onClick={() => handleShenronWish('unlock', true, 'custom_zone')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>Invoquer</button>
+                            )}
+                        </div>
+
+                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('world_scan') ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'bg-white/5 border-white/10'}`}>
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="p-5 bg-black/40 rounded-3xl"><Globe size={36} className={state.unlockedFeatures.includes('world_scan') ? 'text-indigo-400' : 'text-white/20'}/></div>
+                                {state.unlockedFeatures.includes('world_scan') ? <span className="bg-indigo-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">DISPONIBLE</span>}
+                            </div>
+                            <h4 className="font-black text-lg mb-2 uppercase">Vision Planétaire</h4>
+                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Détectez les boules à l'échelle mondiale (20 000 km).</p>
+                            {!state.unlockedFeatures.includes('world_scan') && (
+                                <button onClick={() => handleShenronWish('unlock', true, 'world_scan')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>Invoquer</button>
                             )}
                         </div>
                     </div>
@@ -464,14 +478,14 @@ const App: React.FC = () => {
                 <RadarUI range={currentRadarRange} userLoc={effectiveCenter} balls={state.dragonBalls} onBallClick={setSelectedBall} design={state.design} />
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm pointer-events-none animate-in fade-in slide-in-from-bottom-2">
                    <p className="text-[10px] font-black tracking-widest uppercase flex items-center gap-2">
-                      <Target size={10} /> ÉCHELLE: {currentRadarRange.toFixed(currentRadarRange < 1 ? 2 : 1)} KM
+                      <Target size={10} /> ÉCHELLE: {state.range >= 10000 ? 'PLANÉTAIRE' : `${currentRadarRange.toFixed(currentRadarRange < 1 ? 2 : 1)} KM`}
                    </p>
                 </div>
               </>
             ) : (
               <div className={`w-full h-full relative ${mapTheme === 'dark' ? 'radar-theme' : ''}`}>
                 {effectiveCenter && (
-                  <MapContainer center={[effectiveCenter.lat, effectiveCenter.lng]} zoom={12} zoomControl={false} className="h-full w-full">
+                  <MapContainer center={[effectiveCenter.lat, effectiveCenter.lng]} zoom={state.range >= 10000 ? 2 : 12} zoomControl={false} className="h-full w-full">
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapAutoView center={[effectiveCenter.lat, effectiveCenter.lng]} range={state.range} />
                     {isPickingZone && (
@@ -481,7 +495,7 @@ const App: React.FC = () => {
                             setRadarStep(0);
                         }} />
                     )}
-                    <Circle center={[effectiveCenter.lat, effectiveCenter.lng]} radius={state.range * 1000} pathOptions={{ color: radarColor, fillOpacity: 0.1 }} />
+                    <Circle center={[effectiveCenter.lat, effectiveCenter.lng]} radius={state.range * 1000} pathOptions={{ color: radarColor, fillOpacity: 0.05 }} />
                     <Marker position={[effectiveCenter.lat, effectiveCenter.lng]} icon={L.divIcon({ html: `<div class="w-6 h-6 bg-white ring-4 rounded-full shadow-2xl" style="--tw-ring-color: ${radarColor}"></div>`, className: '', iconSize: [24, 24] })} />
                     {state.dragonBalls.map(b => (
                       <Marker 
@@ -539,19 +553,32 @@ const App: React.FC = () => {
           <div className="w-full space-y-4 px-4">
              <div className="flex items-center justify-between px-2">
                 <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest flex items-center gap-2">Portée de Scan</span>
-                <span className="text-xs font-black" style={{ color: radarColor }}>{state.range} KM</span>
+                <span className="text-xs font-black" style={{ color: radarColor }}>{state.range >= 10000 ? 'MONDE' : `${state.range} KM`}</span>
              </div>
-             <div className="flex justify-center gap-2 w-full">
+             <div className="flex flex-wrap justify-center gap-2 w-full">
                 {[1, 10, 100, 1000].map((r) => (
-                    <button key={r} onClick={() => setState(p => ({...p, range: r}))} className={`flex-1 py-3 text-[9px] font-black rounded-xl border transition-all ${state.range === r ? 'text-black shadow-lg' : 'bg-black/40 text-white border-white/10'}`} style={{ backgroundColor: state.range === r ? radarColor : undefined, borderColor: state.range === r ? radarColor : undefined }}>
+                    <button key={r} onClick={() => setState(p => ({...p, range: r}))} className={`flex-1 min-w-[60px] py-3 text-[9px] font-black rounded-xl border transition-all ${state.range === r ? 'text-black shadow-lg' : 'bg-black/40 text-white border-white/10'}`} style={{ backgroundColor: state.range === r ? radarColor : undefined, borderColor: state.range === r ? radarColor : undefined }}>
                         {r}KM
                     </button>
                 ))}
+                {state.unlockedFeatures.includes('world_scan') && (
+                    <button onClick={() => setState(p => ({...p, range: 20000}))} className={`flex-1 min-w-[60px] py-3 text-[9px] font-black rounded-xl border transition-all ${state.range === 20000 ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-indigo-900/40 text-indigo-200 border-indigo-500/30'}`}>
+                        MONDE
+                    </button>
+                )}
                 {state.unlockedFeatures.includes('custom_zone') && (
                     <button onClick={() => {
-                        const val = prompt("Entrez la portée en KM (min 1) :");
-                        if(val && !isNaN(Number(val)) && Number(val) >= 1) setState(p => ({...p, range: Number(val)}));
-                    }} className={`flex-1 py-3 text-[9px] font-black rounded-xl border transition-all ${state.range > 1000 ? 'bg-blue-600 text-white' : 'bg-white/5 text-blue-400 border-blue-400/30'}`}>
+                        const val = prompt("Entrez la portée en KM (max 10 000) :");
+                        if(val && !isNaN(Number(val)) && Number(val) >= 1) {
+                            const num = Number(val);
+                            if (num > 10000) {
+                                alert("Seul le vœu 'Vision Planétaire' peut percer le voile au-delà de 10 000 km !");
+                                setState(p => ({...p, range: 10000}));
+                            } else {
+                                setState(p => ({...p, range: num}));
+                            }
+                        }
+                    }} className={`flex-1 min-w-[60px] py-3 text-[9px] font-black rounded-xl border transition-all ${state.range > 1000 && state.range <= 10000 ? 'bg-blue-600 text-white' : 'bg-white/5 text-blue-400 border-blue-400/30'}`}>
                         LIBRE
                     </button>
                 )}
