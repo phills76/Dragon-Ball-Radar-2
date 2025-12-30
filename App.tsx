@@ -5,7 +5,19 @@ import L from 'leaflet';
 import { RadarState, RadarRange, DragonBall, UserLocation } from './types';
 import { generateValidCoordinates, relocateBall } from './services/geminiService';
 import RadarUI from './components/RadarUI';
-import { Locate, ShieldCheck, Zap, Info, Map as MapIcon, RefreshCcw, Sun, Moon, AlertCircle, Clock } from 'lucide-react';
+import { 
+  Zap, 
+  RefreshCcw, 
+  Sun, 
+  Moon, 
+  AlertCircle, 
+  Clock, 
+  Menu as MenuIcon, 
+  X, 
+  Info, 
+  ChevronRight,
+  BookOpen
+} from 'lucide-react';
 
 const RELOCATION_COOLDOWN = 24 * 60 * 60 * 1000; // 24 heures
 
@@ -50,6 +62,8 @@ const App: React.FC = () => {
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('light');
   const [selectedBall, setSelectedBall] = useState<DragonBall | null>(null);
   const [isRelocating, setIsRelocating] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   
   const [lastRelocationTime, setLastRelocationTime] = useState<number>(() => {
     const saved = localStorage.getItem('last_relocation_timestamp');
@@ -171,9 +185,90 @@ const App: React.FC = () => {
     setMapTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const InstructionItem: React.FC<{ number: number; text: string }> = ({ number, text }) => (
+    <div className="flex gap-4 items-start mb-6 group">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold group-hover:bg-emerald-500 group-hover:text-black transition-all">
+        {number}
+      </div>
+      <p className="text-sm text-emerald-100/90 leading-relaxed font-sans">{text}</p>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex flex-col items-center p-4">
-      <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/50 p-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-2xl">
+      {/* Menu Burger & Sidebar */}
+      <button 
+        onClick={() => setIsMenuOpen(true)}
+        className="fixed top-6 left-6 z-[1100] p-3 bg-black/60 border border-emerald-500/30 rounded-xl text-emerald-400 hover:bg-emerald-500 hover:text-black transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] active:scale-95"
+      >
+        <MenuIcon size={24} />
+      </button>
+
+      {/* Sidebar Overlay */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[2000] flex">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
+          <div className="relative w-72 h-full bg-black/95 border-r border-emerald-500/20 shadow-2xl animate-in slide-in-from-left duration-300 p-6 flex flex-col">
+            <div className="flex justify-between items-center mb-10">
+              <span className="text-emerald-400 font-bold tracking-widest text-lg uppercase">Menu Système</span>
+              <button onClick={() => setIsMenuOpen(false)} className="text-emerald-400/60 hover:text-emerald-400">
+                <X size={24} />
+              </button>
+            </div>
+
+            <nav className="flex-1">
+              <button 
+                onClick={() => { setShowInstructions(true); setIsMenuOpen(false); }}
+                className="w-full flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <BookOpen size={20} />
+                  <span className="font-bold text-sm uppercase">Comment jouer</span>
+                </div>
+                <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </nav>
+
+            <div className="pt-6 border-t border-emerald-500/10 text-[10px] text-emerald-400/40 font-mono text-center">
+              CAPSULE CORP - OS v3.7
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instructions Modal */}
+      {showInstructions && (
+        <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowInstructions(false)}></div>
+          <div className="relative w-full max-w-lg bg-[#001a0d]/95 border-2 border-emerald-500/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(16,185,129,0.15)] animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8 border-b border-emerald-500/20 pb-4">
+              <h2 className="text-2xl font-bold text-emerald-400 uppercase tracking-tighter flex items-center gap-3">
+                <Info size={28} /> Manuel d'Utilisation
+              </h2>
+              <button onClick={() => setShowInstructions(false)} className="bg-emerald-500/10 p-2 rounded-full text-emerald-400 hover:bg-emerald-500 hover:text-black transition-all">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <InstructionItem number={1} text="Autorisez la géolocalisation pour pouvoir voir les Dragon Balls sur votre position réelle." />
+              <InstructionItem number={2} text="Choisissez votre rayon de recherche (de 1km à l'échelle planétaire) via les boutons en bas." />
+              <InstructionItem number={3} text="Déplacez-vous physiquement vers chaque Dragon Ball indiquée sur le radar ou la carte." />
+              <InstructionItem number={4} text="Une boule est inaccessible ? Cliquez sur son icône pour voir l'option de recalibrage (disponible une fois par jour)." />
+              <InstructionItem number={5} text="Collectez les 7 boules magiques pour pouvoir invoquer Shenron et réaliser votre vœu !" />
+            </div>
+
+            <button 
+              onClick={() => setShowInstructions(false)}
+              className="mt-8 w-full py-4 bg-emerald-500 text-black font-black rounded-2xl hover:bg-emerald-400 transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+            >
+              Compris !
+            </button>
+          </div>
+        </div>
+      )}
+
+      <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/50 p-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-2xl ml-14">
         <div>
           <h1 className="text-2xl font-bold tracking-tighter text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)] uppercase">
             DRAGON BALL RADAR <span className="text-xs text-emerald-400/70">v3.7</span>
