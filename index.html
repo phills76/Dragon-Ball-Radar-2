@@ -1,0 +1,100 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Radar Z</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+      
+      body {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        font-family: 'Orbitron', sans-serif;
+        color: #10b981;
+        background-color: #020617;
+        /* Utilisation de l'image spécifique fournie par l'utilisateur */
+        background-image: 
+          linear-gradient(rgba(2, 6, 23, 0.5), rgba(2, 6, 23, 0.7)), 
+          url('https://poliveira.twake.app/files/019b6fc8-5785-725a-970a-6b99fb0f8d3d/thumbnails/02d1813805138137/large');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        min-height: 100vh;
+      }
+
+      .radar-bg {
+        background: radial-gradient(circle, rgba(0, 77, 38, 0.8) 0%, rgba(0, 26, 13, 0.95) 100%);
+        backdrop-filter: blur(4px);
+      }
+
+      .scan-line {
+        background: linear-gradient(to right, transparent 50%, rgba(16, 185, 129, 0.2) 100%);
+        transform-origin: center;
+        animation: rotate 4s linear infinite;
+      }
+
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      .ping {
+        animation: ping-anim 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
+
+      @keyframes ping-anim {
+        75%, 100% {
+          transform: scale(2);
+          opacity: 0;
+        }
+      }
+
+      .leaflet-container {
+        background: #001a0d !important;
+      }
+
+      .radar-theme .leaflet-tile-pane {
+        filter: invert(100%) hue-rotate(180deg) brightness(0.6) contrast(1.2);
+      }
+
+      .light-theme .leaflet-tile-pane {
+        filter: none;
+      }
+
+      /* Suppression de la scrollbar */
+      ::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "leaflet": "https://esm.sh/leaflet@^1.9.4",
+    "react-leaflet": "https://esm.sh/react-leaflet@^5.0.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": " Dragon Ball Radar 2",
+  "description": "A high-tech Dragon Ball tracker using your real-world location. Find the 7 Dragon Balls hidden in your area while avoiding private properties and water.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
