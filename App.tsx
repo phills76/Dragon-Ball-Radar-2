@@ -130,7 +130,9 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center p-4">
       <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/40 p-4 rounded-2xl backdrop-blur-md border border-white/5 shadow-2xl">
         <div>
-          <h1 className="text-2xl font-bold tracking-tighter text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">DRAGON RADAR <span className="text-xs text-emerald-400/70">v3.3</span></h1>
+          <h1 className="text-2xl font-bold tracking-tighter text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)] uppercase">
+            DRAGON BALL RADAR <span className="text-xs text-emerald-400/70">v3.3</span>
+          </h1>
           <p className="text-[10px] text-emerald-400/60 font-mono">Capsule Corp. Industries</p>
         </div>
         <div className="text-right">
@@ -144,7 +146,7 @@ const App: React.FC = () => {
       <div className="w-full max-w-md mb-8 px-4">
         <div className="flex justify-between text-[10px] mb-1 font-mono text-white/80">
           <span className="bg-black/40 px-2 py-0.5 rounded uppercase tracking-tighter">
-            {foundCount < 7 ? "Énergie Détectée" : "Vœu Prêt"}
+            {foundCount < 7 ? "BOULES TROUVÉES" : "Vœu Prêt"}
           </span>
           <span className="text-emerald-400 font-bold">{foundCount}/7 ★</span>
         </div>
