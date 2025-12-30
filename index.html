@@ -14,16 +14,14 @@
         margin: 0;
         padding: 0;
         min-height: 100vh;
-        background-color: transparent; /* Force la transparence pour voir l'image de fond */
+        background-color: transparent;
       }
 
       body {
         overflow-x: hidden;
         font-family: 'Orbitron', sans-serif;
-        color: #10b981;
       }
 
-      /* Conteneur d'image de fond fixe - Placé tout en bas */
       #background-layer {
         position: fixed;
         top: 0;
@@ -38,21 +36,22 @@
         background-attachment: fixed;
       }
 
-      /* Filtre de lisibilité ajustable */
       #root {
         position: relative;
         min-height: 100vh;
-        background: rgba(0, 0, 0, 0.4); /* Un voile sombre léger pour lire les textes sur l'image */
+        background: rgba(0, 0, 0, 0.4);
         z-index: 1;
       }
 
       .radar-bg {
-        background: radial-gradient(circle, rgba(0, 77, 38, 0.8) 0%, rgba(0, 26, 13, 0.95) 100%);
+        background: radial-gradient(circle, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.9) 100%);
         backdrop-filter: blur(4px);
       }
 
       .scan-line {
-        background: linear-gradient(to right, transparent 50%, rgba(16, 185, 129, 0.2) 100%);
+        position: absolute;
+        width: 100%;
+        height: 100%;
         transform-origin: center;
         animation: rotate 4s linear infinite;
       }
@@ -73,30 +72,12 @@
         }
       }
 
-      .leaflet-container {
-        background: #001a0d !important;
-      }
-
       .radar-theme .leaflet-tile-pane {
         filter: invert(100%) hue-rotate(180deg) brightness(0.6) contrast(1.2);
       }
 
-      .light-theme .leaflet-tile-pane {
-        filter: none;
-      }
-
-      /* Suppression de la scrollbar */
-      ::-webkit-scrollbar {
-        width: 0px;
-        height: 0px;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
+      ::-webkit-scrollbar { width: 0px; height: 0px; }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 <script type="importmap">
 {
