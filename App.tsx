@@ -7,7 +7,7 @@ import { generateValidCoordinates } from './services/geminiService';
 import RadarUI from './components/RadarUI';
 import { 
   Zap, RefreshCcw, Sun, Moon, Menu as MenuIcon, X, BookOpen, Star, Camera, Shield, 
-  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft, Globe
+  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft, Globe, CheckCircle2
 } from 'lucide-react';
 
 const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
@@ -29,7 +29,7 @@ const RACES = [
 const MapAutoView: React.FC<{ center: [number, number], range: number }> = ({ center, range }) => {
   const map = useMap();
   const zoomLevel = useMemo(() => {
-    if (range >= 10000) return 2; // Niveau monde
+    if (range >= 10000) return 2;
     if (range <= 1) return 15;
     if (range <= 10) return 12;
     if (range <= 100) return 9;
@@ -51,7 +51,7 @@ const MapPicker: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({ o
 
 const App: React.FC = () => {
   const [state, setState] = useState<RadarState>(() => {
-    const saved = localStorage.getItem('radar_save_v10');
+    const saved = localStorage.getItem('radar_save_v11');
     const defaultState: RadarState = {
       range: 10,
       userLocation: null,
@@ -60,7 +60,7 @@ const App: React.FC = () => {
       isLoading: false,
       error: null,
       design: 'bulma',
-      collectionRadius: 0.05, // 50m
+      collectionRadius: 0.05, 
       unlockedFeatures: [],
       currentRace: 'Humain'
     };
@@ -79,7 +79,7 @@ const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('radar_save_v10', JSON.stringify(state));
+    localStorage.setItem('radar_save_v11', JSON.stringify(state));
   }, [state]);
 
   useEffect(() => {
@@ -124,6 +124,12 @@ const App: React.FC = () => {
   const foundCount = state.dragonBalls.filter(b => b.found).length;
   const isMapView = radarStep === 4;
 
+  const isWorldScanAvailable = useMemo(() => {
+    return state.unlockedFeatures.includes('scouter') && 
+           state.unlockedFeatures.includes('custom_zone') && 
+           state.collectionRadius <= 0.001;
+  }, [state.unlockedFeatures, state.collectionRadius]);
+
   useEffect(() => {
     if (!state.userLocation || state.dragonBalls.length === 0) return;
     const updatedBalls = state.dragonBalls.map(ball => {
@@ -139,6 +145,11 @@ const App: React.FC = () => {
   const handleShenronWish = (type: string, value: any, unlockKey?: string) => {
     if (foundCount < 7) {
       alert("Il vous faut les 7 Dragon Balls pour exaucer ce vœu !");
+      return;
+    }
+
+    if (unlockKey === 'world_scan' && !isWorldScanAvailable) {
+      alert("Ce vœu suprême nécessite d'avoir d'abord débloqué le Scouter, la Zone Perso et la Maîtrise de Collecte à 1m !");
       return;
     }
     
@@ -189,14 +200,13 @@ const App: React.FC = () => {
   }, [selectedBall, state.userLocation]);
 
   const currentRadarRange = useMemo(() => {
-    if (state.range >= 10000) return 20000; // Mode monde
+    if (state.range >= 10000) return 20000;
     const multipliers = [1, 0.5, 0.2, 0.05];
     return state.range * (multipliers[radarStep] || 1);
   }, [state.range, radarStep]);
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 transition-colors duration-1000" style={{ color: radarColor }}>
-      {/* Shenron Cinematic */}
       {showShenron && (
         <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/95 animate-in fade-in duration-1000">
           <div className="absolute inset-0 bg-[url('https://www.transparentpng.com/download/dragon-ball/shenron-dragon-ball-z-png-9.png')] bg-contain bg-center bg-no-repeat opacity-40 scale-150 animate-pulse"></div>
@@ -210,7 +220,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Scouter AR Overlay */}
       {isScouterMode && (
         <div className="fixed inset-0 z-[4000] bg-black">
           <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover opacity-50" />
@@ -230,12 +239,10 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sidebar Trigger */}
       <button onClick={() => setIsMenuOpen(true)} className="fixed top-6 left-6 z-[1100] p-3 bg-black/60 border rounded-2xl shadow-xl" style={{ borderColor: `${radarColor}4d`, color: radarColor }}>
         <MenuIcon size={24} />
       </button>
 
-      {/* Sidebar Menu */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[2000] flex">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsMenuOpen(false)}></div>
@@ -276,7 +283,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sanctuary Modal */}
       {showWishes && (
         <div className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-6">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowWishes(false)}></div>
@@ -292,7 +298,6 @@ const App: React.FC = () => {
              </header>
 
              <div className="space-y-16">
-                {/* 1. Personnalisation du Radar */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
                         <Map size={16} /> 1. Personnalisation du Radar
@@ -313,7 +318,6 @@ const App: React.FC = () => {
                     </div>
                 </section>
 
-                {/* 2. Évolution de Race */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
                         <User size={16} /> 2. Évolution de Race (Actuelle: {state.currentRace})
@@ -328,7 +332,6 @@ const App: React.FC = () => {
                     </div>
                 </section>
 
-                {/* 3. Maîtrise de Collecte */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
                         <Target size={16} /> 3. Maîtrise de Collecte
@@ -351,12 +354,11 @@ const App: React.FC = () => {
                                 <button onClick={() => handleShenronWish('radius', getNextRadius())} className={`px-10 py-4 rounded-xl font-black text-xs uppercase transition-all ${foundCount === 7 ? 'bg-orange-500 text-white shadow-xl hover:scale-105' : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'}`}>
                                     {foundCount === 7 ? `Passer à ${getNextRadius()*1000}M` : "Shenron Requis"}
                                 </button>
-                            ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest">Maîtrise Ultime Débloquée</span>}
+                            ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest flex items-center gap-2 justify-center sm:justify-start"><CheckCircle2 size={16}/> Maîtrise Ultime Débloquée</span>}
                         </div>
                     </div>
                 </section>
 
-                {/* 4. Capacités Spéciales */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
                         <Sparkles size={16} /> 4. Capacités Spéciales
@@ -386,15 +388,49 @@ const App: React.FC = () => {
                             )}
                         </div>
 
-                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('world_scan') ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'bg-white/5 border-white/10'}`}>
+                        <div className={`p-8 rounded-[2.5rem] border transition-all relative overflow-hidden ${state.unlockedFeatures.includes('world_scan') ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : isWorldScanAvailable ? 'bg-white/10 border-indigo-500/30' : 'bg-black/40 border-white/5 opacity-50'}`}>
+                            {!isWorldScanAvailable && !state.unlockedFeatures.includes('world_scan') && (
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 text-center">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Lock size={24} className="text-white/40 mb-2"/>
+                                        <p className="text-[9px] font-mono text-white/60 uppercase leading-relaxed">
+                                            Vœu Suprême Verrouillé<br/>
+                                            Complétez Scouter, Zone & Maîtrise
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex justify-between items-start mb-6">
                                 <div className="p-5 bg-black/40 rounded-3xl"><Globe size={36} className={state.unlockedFeatures.includes('world_scan') ? 'text-indigo-400' : 'text-white/20'}/></div>
-                                {state.unlockedFeatures.includes('world_scan') ? <span className="bg-indigo-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">DISPONIBLE</span>}
+                                {state.unlockedFeatures.includes('world_scan') ? <span className="bg-indigo-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">ULTIME</span>}
                             </div>
                             <h4 className="font-black text-lg mb-2 uppercase">Vision Planétaire</h4>
                             <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Détectez les boules à l'échelle mondiale (20 000 km).</p>
+                            
                             {!state.unlockedFeatures.includes('world_scan') && (
-                                <button onClick={() => handleShenronWish('unlock', true, 'world_scan')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>Invoquer</button>
+                                <button 
+                                    onClick={() => handleShenronWish('unlock', true, 'world_scan')} 
+                                    className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && isWorldScanAvailable ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                                >
+                                    {isWorldScanAvailable ? "Invoquer l'Ultime" : "Pré-requis requis"}
+                                </button>
+                            )}
+
+                            {!state.unlockedFeatures.includes('world_scan') && (
+                                <div className="mt-4 space-y-1">
+                                    <div className="flex items-center gap-2 text-[8px] font-mono uppercase">
+                                        {state.unlockedFeatures.includes('scouter') ? <CheckCircle2 size={10} className="text-emerald-500"/> : <div className="w-2.5 h-2.5 rounded-full border border-white/20"/>}
+                                        <span className={state.unlockedFeatures.includes('scouter') ? 'text-emerald-500' : 'opacity-40'}>Scouter AR</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[8px] font-mono uppercase">
+                                        {state.unlockedFeatures.includes('custom_zone') ? <CheckCircle2 size={10} className="text-emerald-500"/> : <div className="w-2.5 h-2.5 rounded-full border border-white/20"/>}
+                                        <span className={state.unlockedFeatures.includes('custom_zone') ? 'text-emerald-500' : 'opacity-40'}>Zone Personnalisée</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[8px] font-mono uppercase">
+                                        {state.collectionRadius <= 0.001 ? <CheckCircle2 size={10} className="text-emerald-500"/> : <div className="w-2.5 h-2.5 rounded-full border border-white/20"/>}
+                                        <span className={state.collectionRadius <= 0.001 ? 'text-emerald-500' : 'opacity-40'}>Maîtrise Collecte (1m)</span>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -412,7 +448,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Instructions Modal */}
       {showInstructions && (
         <div className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-6">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowInstructions(false)}></div>
@@ -424,15 +459,14 @@ const App: React.FC = () => {
              <div className="space-y-6 text-sm font-mono leading-relaxed" style={{ color: `${radarColor}cc` }}>
                 <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>1. Utilisez le RADAR pour localiser les 7 Dragon Balls dispersées autour de vous.</p>
                 <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>2. Cliquez sur le RADAR pour changer d'échelle (Zoom cyclique).</p>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>3. Atteignez physiquement la position d'une boule pour la collecter automatiquement (portée configurable).</p>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>4. Une fois les 7 boules réunies, invoquez SHENRON pour obtenir des vœux et débloquer des capacités comme le Scouter AR ou les Zones Perso.</p>
+                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>3. Atteignez physiquement la position d'une boule pour la collecter automatiquement.</p>
+                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>4. Une fois les 7 boules réunies, invoquez SHENRON pour débloquer des capacités. Notez que la Vision Planétaire est le vœu final, débloqué seulement après tous les autres.</p>
                 <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>5. Changez votre race et votre design de radar via le Sanctuaire pour varier votre expérience.</p>
              </div>
           </div>
         </div>
       )}
 
-      {/* Main UI */}
       <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/60 p-5 rounded-3xl backdrop-blur-xl border border-white/10 ml-16 shadow-2xl">
         <div>
           <h1 className="text-2xl font-black tracking-tighter uppercase" style={{ color: radarColor }}>
@@ -446,7 +480,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Balls Inventory */}
       <div className="w-full max-w-md mb-10 px-6 flex flex-col items-center">
         <div className="flex justify-between w-full text-[11px] mb-4 font-mono font-bold">
           <span className="opacity-40 uppercase tracking-widest">{foundCount < 7 ? "DÉTECTION EN COURS" : "SHENRON DISPONIBLE"}</span>
@@ -466,7 +499,6 @@ const App: React.FC = () => {
       </div>
 
       <main className="w-full flex-1 flex flex-col items-center max-w-4xl relative">
-        {/* Conteneur du Radar - Cliquable SEULEMENT si mode radar */}
         <div 
           onClick={!isMapView && !isPickingZone ? () => setRadarStep(p => (p+1)%5) : undefined} 
           className={`relative w-full aspect-square max-w-md ${!isMapView ? 'cursor-pointer active:scale-95' : ''} group select-none transition-transform duration-200`}
@@ -507,7 +539,6 @@ const App: React.FC = () => {
                     ))}
                   </MapContainer>
                 )}
-                {/* Bouton de thème INTERNE au radar, tout rond */}
                 <button 
                   onClick={(e) => { e.stopPropagation(); setMapTheme(p => p==='dark'?'light':'dark'); }} 
                   className="absolute top-24 right-14 z-[1001] w-12 h-12 bg-black/80 text-white rounded-full border-2 shadow-2xl flex items-center justify-center active:scale-90 transition-all hover:bg-white/10"
@@ -535,7 +566,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Interface Map - Bouton RETOUR positionné à l'extérieur du radar */}
         {isMapView && (
           <div className="mt-8 flex animate-in fade-in slide-in-from-top-4 duration-300">
             <button 
@@ -549,7 +579,6 @@ const App: React.FC = () => {
         )}
 
         <div className={`${isMapView ? 'mt-12' : 'mt-24'} flex flex-col items-center gap-8 w-full max-w-md transition-all duration-500`}>
-          {/* Gestion de la portée */}
           <div className="w-full space-y-4 px-4">
              <div className="flex items-center justify-between px-2">
                 <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest flex items-center gap-2">Portée de Scan</span>
