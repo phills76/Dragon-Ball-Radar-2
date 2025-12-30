@@ -283,15 +283,38 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <div className="w-full max-w-md mb-8 px-4">
-        <div className="flex justify-between text-[10px] mb-1 font-mono text-white/80">
+      {/* Collection des Boules de Cristal */}
+      <div className="w-full max-w-md mb-8 px-4 flex flex-col items-center">
+        <div className="flex justify-between w-full text-[10px] mb-3 font-mono text-white/80">
           <span className="bg-black/40 px-2 py-0.5 rounded uppercase tracking-tighter">
-            {foundCount < 7 ? "BOULES DÉTECTÉES" : "PRÊT POUR LE VŒU"}
+            {foundCount < 7 ? "BOULES RÉCUPÉRÉES" : "PRÊT POUR LE VŒU"}
           </span>
           <span className="text-emerald-400 font-bold">{foundCount}/7 ★</span>
         </div>
-        <div className="h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/10 shadow-inner">
-          <div className="h-full bg-emerald-400 shadow-[0_0_15px_#10b981] transition-all duration-700" style={{ width: `${(foundCount/7)*100}%` }} />
+        
+        <div className="flex justify-between w-full gap-2 py-2 px-3 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
+          {[1, 2, 3, 4, 5, 6, 7].map((stars) => {
+            const isFound = state.dragonBalls.find(b => b.stars === stars)?.found;
+            return (
+              <div 
+                key={stars}
+                className={`
+                  relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-700
+                  ${isFound 
+                    ? 'bg-orange-500 border-yellow-400 shadow-[0_0_15px_rgba(251,191,36,0.8)] scale-110' 
+                    : 'bg-zinc-800/40 border-zinc-700/50 opacity-30 grayscale'
+                  }
+                `}
+              >
+                <span className={`text-[10px] font-black ${isFound ? 'text-white drop-shadow-md' : 'text-zinc-600'}`}>
+                  {stars}★
+                </span>
+                {isFound && (
+                   <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse"></div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
