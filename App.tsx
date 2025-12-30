@@ -3,9 +3,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { RadarState, RadarRange, DragonBall, UserLocation } from './types';
-import { generateValidCoordinates } from './services/geminiService';
+import { generateValidCoordinates, relocateBall } from './services/geminiService';
 import RadarUI from './components/RadarUI';
-import { Locate, ShieldCheck, Zap, Info, Map as MapIcon, RefreshCcw, Sun, Moon } from 'lucide-react';
+import { Locate, ShieldCheck, Zap, Info, Map as MapIcon, RefreshCcw, Sun, Moon, AlertCircle, Clock } from 'lucide-react';
+
+const RELOCATION_COOLDOWN = 24 * 60 * 60 * 1000; // 24 heures
 
 const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
   html: `<div class="w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${found ? 'bg-gray-400 opacity-50' : 'bg-orange-500 ring-4 ring-yellow-400'} text-white font-bold border-2 border-white transform hover:scale-110 transition-transform">${stars}★</div>`,
@@ -45,8 +47,14 @@ const App: React.FC = () => {
   });
 
   const [radarStep, setRadarStep] = useState<number>(0);
-  const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark');
+  const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('light');
   const [selectedBall, setSelectedBall] = useState<DragonBall | null>(null);
+  const [isRelocating, setIsRelocating] = useState(false);
+  
+  const [lastRelocationTime, setLastRelocationTime] = useState<number>(() => {
+    const saved = localStorage.getItem('last_relocation_timestamp');
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -62,7 +70,7 @@ const App: React.FC = () => {
           }));
         },
         (err) => {
-          setState(prev => ({ ...prev, error: "Localisation requise." }));
+          setState(prev => ({ ...prev, error: "Localisation GPS requise." }));
         },
         { enableHighAccuracy: true }
       );
@@ -77,10 +85,47 @@ const App: React.FC = () => {
       const balls = await generateValidCoordinates(state.userLocation, state.range);
       setState(prev => ({ ...prev, dragonBalls: balls, isLoading: false }));
       setRadarStep(0); 
+      setSelectedBall(null);
     } catch (err) {
       setState(prev => ({ ...prev, error: "Erreur lors du scan.", isLoading: false }));
     }
   }, [state.userLocation, state.range]);
+
+  const canRelocate = useMemo(() => {
+    return Date.now() - lastRelocationTime > RELOCATION_COOLDOWN;
+  }, [lastRelocationTime]);
+
+  const getTimeRemaining = () => {
+    const remaining = RELOCATION_COOLDOWN - (Date.now() - lastRelocationTime);
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${mins}m`;
+  };
+
+  const handleRelocate = async () => {
+    if (!selectedBall || !state.userLocation || isRelocating || !canRelocate) return;
+    
+    setIsRelocating(true);
+    try {
+      const newCoords = await relocateBall(state.userLocation, state.range, selectedBall.stars);
+      setState(prev => ({
+        ...prev,
+        dragonBalls: prev.dragonBalls.map(b => 
+          b.id === selectedBall.id ? { ...b, ...newCoords } : b
+        )
+      }));
+      
+      const now = Date.now();
+      setLastRelocationTime(now);
+      localStorage.setItem('last_relocation_timestamp', now.toString());
+      
+      setSelectedBall(prev => prev ? { ...prev, ...newCoords } : null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRelocating(false);
+    }
+  };
 
   const handleNextStep = useCallback(() => {
     setRadarStep((prev) => (prev + 1) % 5);
@@ -128,17 +173,17 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4">
-      <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/40 p-4 rounded-2xl backdrop-blur-md border border-white/5 shadow-2xl">
+      <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/50 p-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-2xl">
         <div>
           <h1 className="text-2xl font-bold tracking-tighter text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)] uppercase">
-            DRAGON BALL RADAR <span className="text-xs text-emerald-400/70">v3.3</span>
+            DRAGON BALL RADAR <span className="text-xs text-emerald-400/70">v3.7</span>
           </h1>
           <p className="text-[10px] text-emerald-400/60 font-mono">Capsule Corp. Industries</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] font-mono uppercase text-emerald-400/50">Système</p>
+          <p className="text-[10px] font-mono uppercase text-emerald-400/50">Mode Actuel</p>
           <p className="text-xs font-bold text-emerald-400 uppercase">
-            {isMapView ? `MAP ${mapTheme}` : `RADAR ZOOM x${radarStep + 1}`}
+            {isMapView ? `VUE CARTE (${mapTheme})` : `ZOOM x${radarStep + 1}`}
           </p>
         </div>
       </header>
@@ -146,7 +191,7 @@ const App: React.FC = () => {
       <div className="w-full max-w-md mb-8 px-4">
         <div className="flex justify-between text-[10px] mb-1 font-mono text-white/80">
           <span className="bg-black/40 px-2 py-0.5 rounded uppercase tracking-tighter">
-            {foundCount < 7 ? "BOULES TROUVÉES" : "Vœu Prêt"}
+            {foundCount < 7 ? "BOULES DÉTECTÉES" : "PRÊT POUR LE VŒU"}
           </span>
           <span className="text-emerald-400 font-bold">{foundCount}/7 ★</span>
         </div>
@@ -212,7 +257,7 @@ const App: React.FC = () => {
 
                     {state.dragonBalls.map(ball => (
                       <Marker 
-                        key={ball.id} 
+                        key={`${ball.id}-${ball.lat}`} 
                         position={[ball.lat, ball.lng]} 
                         icon={createDragonBallIcon(ball.stars, ball.found)}
                       />
@@ -223,14 +268,13 @@ const App: React.FC = () => {
                 <button
                   onClick={toggleTheme}
                   className="absolute bottom-16 right-1/2 translate-x-[70px] z-[1001] p-3 rounded-full bg-black/70 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shadow-2xl active:scale-90 backdrop-blur-sm"
-                  title="Thème"
                 >
                   {mapTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
 
                 <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">
                    <div className="bg-black/70 px-4 py-1.5 rounded-full border border-emerald-500/30 text-[10px] text-emerald-400 font-mono backdrop-blur-sm shadow-xl">
-                      PÉRIMÈTRE SCAN : {state.range} KM
+                      SCAN : {state.range} KM
                    </div>
                 </div>
               </div>
@@ -239,7 +283,7 @@ const App: React.FC = () => {
 
           <div className="absolute -bottom-10 left-0 right-0 text-center opacity-80 group-hover:opacity-100 transition-opacity drop-shadow-md">
             <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-[0.2em] bg-black/30 px-3 py-1 rounded-full border border-white/5">
-              {isMapView ? "TAP POUR QUITTER" : "TAP POUR ZOOMER"}
+              {isMapView ? "TAP POUR RETOUR AU RADAR" : "TAP POUR ZOOMER"}
             </span>
           </div>
         </div>
@@ -263,21 +307,43 @@ const App: React.FC = () => {
             className="group w-full py-5 bg-[#ff7700] text-white font-black rounded-2xl border-b-4 border-[#cc5e00] active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-3 uppercase tracking-widest disabled:opacity-50 shadow-2xl"
           >
             {state.isLoading ? <RefreshCcw className="animate-spin" /> : <Zap className="w-5 h-5 fill-current group-hover:scale-110 transition-transform" />}
-            {state.isLoading ? "CHARGEMENT..." : "LANCER LE SCAN"}
+            {state.isLoading ? "CHARGEMENT..." : "SCANNER LA ZONE"}
           </button>
         </div>
 
         {selectedBall && (
           <div className="mt-8 p-6 bg-black/60 border border-white/10 rounded-2xl w-full max-w-md backdrop-blur-lg animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-2xl">
-            <div className="flex justify-between items-center">
-              <div>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
                 <h3 className="text-emerald-400 font-bold flex items-center gap-2 text-lg">
                   BOULE N°{selectedBall.stars} <span className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]">★</span>
                 </h3>
                 <p className="text-[11px] text-emerald-400/60 uppercase font-mono mt-1 leading-tight tracking-tight">{selectedBall.name}</p>
+                
+                {!selectedBall.found && (
+                  <div className="mt-4">
+                    <button 
+                      onClick={handleRelocate}
+                      disabled={isRelocating || !canRelocate}
+                      className={`flex items-center gap-2 text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all border ${
+                        canRelocate 
+                        ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border-orange-500/30' 
+                        : 'bg-zinc-800/50 text-zinc-500 border-zinc-700 cursor-not-allowed opacity-70'
+                      }`}
+                    >
+                      {isRelocating ? <RefreshCcw size={10} className="animate-spin" /> : canRelocate ? <AlertCircle size={10} /> : <Clock size={10} />}
+                      {isRelocating ? "RECALIBRAGE..." : canRelocate ? "INACCESSIBLE ? RECALIBRER" : `RECHARGE : ${getTimeRemaining()}`}
+                    </button>
+                    {!canRelocate && !isRelocating && (
+                      <p className="text-[8px] text-zinc-600 font-mono mt-2 uppercase tracking-tighter">
+                        Limite : 1 recalibrage toutes les 24h.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="text-right">
-                <p className="text-[10px] text-emerald-400/40 font-mono uppercase tracking-tighter">Distance Relative</p>
+              <div className="text-right ml-4">
+                <p className="text-[10px] text-emerald-400/40 font-mono uppercase tracking-tighter">Distance</p>
                 <p className="text-3xl font-black text-white leading-none drop-shadow-md">
                   {state.userLocation ? Math.round(getDistance(state.userLocation.lat, state.userLocation.lng, selectedBall.lat, selectedBall.lng) * 100) / 100 : '--'} 
                   <span className="text-sm ml-1 text-emerald-500">KM</span>
@@ -290,7 +356,7 @@ const App: React.FC = () => {
 
       <footer className="mt-14 py-8 opacity-40 text-[9px] font-mono text-center uppercase tracking-widest leading-relaxed text-emerald-400">
         <p className="font-bold">© 750 AGE CAPSULE CORP - DESIGN BY BULMA</p>
-        <p className="mt-1">PROTOCOLE DE RECHERCHE TERRESTRE ACTIVÉ</p>
+        <p className="mt-1">IMAGE SOURCE : PERSISTANTE</p>
       </footer>
     </div>
   );

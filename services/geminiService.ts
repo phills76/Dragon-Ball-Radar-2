@@ -9,14 +9,16 @@ export async function generateValidCoordinates(
   rangeKm: RadarRange
 ): Promise<DragonBall[]> {
   const prompt = `
-    Find 7 safe, public, and accessible locations (parks, public squares, landmarks, nature reserves) 
-    within a ${rangeKm}km radius of the coordinates: Latitude ${userLoc.lat}, Longitude ${userLoc.lng}.
-    
-    IMPORTANT RULES:
-    1. The locations MUST be on land (not in oceans, lakes, or large rivers).
-    2. The locations MUST be public (avoid private residences, private gardens, or industrial restricted zones).
-    3. Provide accurate GPS coordinates for each.
-    4. Distribute them somewhat randomly within the ${rangeKm}km radius.
+    TASK: Find 7 real-world coordinates for a "treasure hunt" game.
+    CENTER: Latitude ${userLoc.lat}, Longitude ${userLoc.lng}
+    RADIUS: ${rangeKm}km
+
+    STRICT CONSTRAINTS:
+    1. NO PRIVATE PROPERTY: Locations must be strictly public (public parks, city squares, public monuments, beaches, open hiking trails).
+    2. NO WATER: Coordinates must be on dry land. Avoid the middle of lakes, rivers, or oceans.
+    3. ACCESSIBILITY: The spot must be reachable by a person on foot without climbing fences or breaking laws.
+    4. NO SENSITIVE AREAS: Avoid cemeteries, military bases, hospitals, or schools.
+    5. VARIETY: Spread the 7 points across the ${rangeKm}km radius.
   `;
 
   try {
@@ -30,9 +32,9 @@ export async function generateValidCoordinates(
           items: {
             type: Type.OBJECT,
             properties: {
-              name: { type: Type.STRING, description: "Description of the place (e.g., Central Park Bench)" },
-              lat: { type: Type.NUMBER, description: "Latitude coordinate" },
-              lng: { type: Type.NUMBER, description: "Longitude coordinate" },
+              name: { type: Type.STRING, description: "Detailed name of the public place" },
+              lat: { type: Type.NUMBER, description: "Latitude" },
+              lng: { type: Type.NUMBER, description: "Longitude" },
             },
             required: ["name", "lat", "lng"]
           }
@@ -51,21 +53,76 @@ export async function generateValidCoordinates(
     }));
   } catch (error) {
     console.error("Gemini Generation Error:", error);
-    // Fallback: Random generation logic if AI fails (basic bounding box)
-    return Array.from({ length: 7 }, (_, i) => {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.random() * rangeKm;
-      // Very rough approx: 1 deg lat is ~111km
-      const dLat = (dist * Math.cos(angle)) / 111;
-      const dLng = (dist * Math.sin(angle)) / (111 * Math.cos(userLoc.lat * Math.PI / 180));
-      return {
-        id: i + 1,
-        lat: userLoc.lat + dLat,
-        lng: userLoc.lng + dLng,
-        stars: i + 1,
-        found: false,
-        name: `Inconnue - Zone ${i + 1}`
-      };
-    });
+    return fallbackGeneration(userLoc, rangeKm);
   }
+}
+
+export async function relocateBall(
+  userLoc: UserLocation,
+  rangeKm: RadarRange,
+  ballStars: number
+): Promise<Partial<DragonBall>> {
+  const prompt = `
+    Find ONE new replacement coordinate.
+    CENTER: Latitude ${userLoc.lat}, Longitude ${userLoc.lng}
+    RADIUS: ${rangeKm}km
+    
+    STRICT RULES: 
+    - MUST be a public space (Park, Square, Landmark).
+    - MUST be on solid ground (No water).
+    - MUST NOT be a private house or yard.
+    - MUST be safe and legal to access.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            lat: { type: Type.NUMBER },
+            lng: { type: Type.NUMBER },
+          },
+          required: ["name", "lat", "lng"]
+        }
+      }
+    });
+
+    const data = JSON.parse(response.text);
+    return {
+      lat: data.lat,
+      lng: data.lng,
+      name: data.name
+    };
+  } catch (error) {
+    console.error("Gemini Relocation Error:", error);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * (rangeKm / 2);
+    return {
+      lat: userLoc.lat + (dist * Math.cos(angle)) / 111,
+      lng: userLoc.lng + (dist * Math.sin(angle)) / (111 * Math.cos(userLoc.lat * Math.PI / 180)),
+      name: `Point Public Recalibré`
+    };
+  }
+}
+
+function fallbackGeneration(userLoc: UserLocation, rangeKm: RadarRange): DragonBall[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = (Math.random() * rangeKm) * 0.8;
+    const dLat = (dist * Math.cos(angle)) / 111;
+    const dLng = (dist * Math.sin(angle)) / (111 * Math.cos(userLoc.lat * Math.PI / 180));
+    return {
+      id: i + 1,
+      lat: userLoc.lat + dLat,
+      lng: userLoc.lng + dLng,
+      stars: i + 1,
+      found: false,
+      name: `Zone Verte Publique ${i + 1}`
+    };
+  });
 }

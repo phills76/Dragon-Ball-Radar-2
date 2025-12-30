@@ -4,28 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dragon Radar Z</title>
+    <title>Dragon Ball Radar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
       
-      body {
+      html, body {
         margin: 0;
         padding: 0;
+        min-height: 100vh;
+        background-color: transparent; /* Force la transparence pour voir l'image de fond */
+      }
+
+      body {
         overflow-x: hidden;
         font-family: 'Orbitron', sans-serif;
         color: #10b981;
-        background-color: #020617;
-        /* Utilisation de la nouvelle image spécifique fournie par l'utilisateur */
-        background-image: 
-          linear-gradient(rgba(2, 6, 23, 0.5), rgba(2, 6, 23, 0.7)), 
-          url('https://poliveira.twake.app/files/019b6fc8-5785-725a-970a-6b99fb0f8d3d/thumbnails/2e413ff8aa9e7fd8/large');
+      }
+
+      /* Conteneur d'image de fond fixe - Placé tout en bas */
+      #background-layer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -20;
+        background-image: url('https://poliveira.twake.app/files/019b6fc8-5785-725a-970a-6b99fb0f8d3d/thumbnails/2e413ff8aa9e7fd8/large');
         background-size: cover;
         background-position: center;
-        background-attachment: fixed;
         background-repeat: no-repeat;
+        background-attachment: fixed;
+      }
+
+      /* Filtre de lisibilité ajustable */
+      #root {
+        position: relative;
         min-height: 100vh;
+        background: rgba(0, 0, 0, 0.4); /* Un voile sombre léger pour lire les textes sur l'image */
+        z-index: 1;
       }
 
       .radar-bg {
@@ -95,6 +113,7 @@
 </script>
 </head>
 <body>
+    <div id="background-layer"></div>
     <div id="root"></div>
 </body>
 </html>
