@@ -267,7 +267,7 @@ const App: React.FC = () => {
                 <span className="font-black text-sm uppercase">Guide de Survie</span>
               </button>
             </nav>
-            <div className="pt-8 border-t text-[11px] font-mono text-center tracking-widest opacity-40" style={{ borderColor: `${radarColor}1a` }}>
+            <div className="pt-8 border-t text-[11px] font-mono text-center trackingest opacity-40" style={{ borderColor: `${radarColor}1a` }}>
               RACE: {state.currentRace.toUpperCase()}
             </div>
           </div>
@@ -483,7 +483,14 @@ const App: React.FC = () => {
                     )}
                     <Circle center={[effectiveCenter.lat, effectiveCenter.lng]} radius={state.range * 1000} pathOptions={{ color: radarColor, fillOpacity: 0.1 }} />
                     <Marker position={[effectiveCenter.lat, effectiveCenter.lng]} icon={L.divIcon({ html: `<div class="w-6 h-6 bg-white ring-4 rounded-full shadow-2xl" style="--tw-ring-color: ${radarColor}"></div>`, className: '', iconSize: [24, 24] })} />
-                    {state.dragonBalls.map(b => <Marker key={b.id} position={[b.lat, b.lng]} icon={createDragonBallIcon(b.stars, b.found)} />)}
+                    {state.dragonBalls.map(b => (
+                      <Marker 
+                        key={b.id} 
+                        position={[b.lat, b.lng]} 
+                        icon={createDragonBallIcon(b.stars, b.found)} 
+                        eventHandlers={{ click: () => setSelectedBall(b) }}
+                      />
+                    ))}
                   </MapContainer>
                 )}
                 {/* Bouton de thème INTERNE au radar, tout rond */}
