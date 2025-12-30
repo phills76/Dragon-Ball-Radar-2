@@ -6,8 +6,8 @@ import { RadarState, RadarRange, DragonBall, UserLocation, RadarDesign } from '.
 import { generateValidCoordinates } from './services/geminiService';
 import RadarUI from './components/RadarUI';
 import { 
-  Zap, RefreshCcw, Sun, Menu as MenuIcon, X, BookOpen, Star, Camera, Shield, 
-  Wand2, MapPin, Lock, Target, Map, Sparkles, User, ChevronRight, Sliders
+  Zap, RefreshCcw, Sun, Moon, Menu as MenuIcon, X, BookOpen, Star, Camera, Shield, 
+  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft
 } from 'lucide-react';
 
 const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
@@ -72,7 +72,6 @@ const App: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showWishes, setShowWishes] = useState(false);
   const [showShenron, setShowShenron] = useState(false);
-  // Fix: Added missing state for instructions modal
   const [showInstructions, setShowInstructions] = useState(false);
   const [isScouterMode, setIsScouterMode] = useState(false);
   const [isPickingZone, setIsPickingZone] = useState(false);
@@ -187,6 +186,11 @@ const App: React.FC = () => {
     const d = calculateDistance(state.userLocation.lat, state.userLocation.lng, selectedBall.lat, selectedBall.lng);
     return d > 1 ? `${d.toFixed(2)} km` : `${(d * 1000).toFixed(0)} m`;
   }, [selectedBall, state.userLocation]);
+
+  const currentRadarRange = useMemo(() => {
+    const multipliers = [1, 0.5, 0.2, 0.05];
+    return state.range * (multipliers[radarStep] || 1);
+  }, [state.range, radarStep]);
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 transition-colors duration-1000" style={{ color: radarColor }}>
@@ -394,7 +398,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Fix: Added missing Instructions Modal */}
+      {/* Instructions Modal */}
       {showInstructions && (
         <div className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-6">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowInstructions(false)}></div>
@@ -418,7 +422,7 @@ const App: React.FC = () => {
       <header className="w-full max-w-2xl flex justify-between items-center mb-6 bg-black/60 p-5 rounded-3xl backdrop-blur-xl border border-white/10 ml-16 shadow-2xl">
         <div>
           <h1 className="text-2xl font-black tracking-tighter uppercase" style={{ color: radarColor }}>
-            DRAGON RADAR <span className="text-[10px] opacity-60 ml-2 font-mono">X-800</span>
+            DRAGON BALL RADAR <span className="text-[10px] opacity-60 ml-2 font-mono">X-800</span>
           </h1>
           <p className="text-[10px] opacity-50 font-mono tracking-widest mt-1">PROPRIÉTÉ DE BULMA - {state.currentRace.toUpperCase()}</p>
         </div>
@@ -447,14 +451,25 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <main className="w-full flex-1 flex flex-col items-center max-w-4xl">
-        <div onClick={!isMapView && !isPickingZone ? () => setRadarStep(p => (p+1)%5) : undefined} className={`relative w-full aspect-square max-w-md ${!isMapView ? 'cursor-pointer' : ''} group select-none`}>
+      <main className="w-full flex-1 flex flex-col items-center max-w-4xl relative">
+        {/* Conteneur du Radar - Cliquable SEULEMENT si mode radar */}
+        <div 
+          onClick={!isMapView && !isPickingZone ? () => setRadarStep(p => (p+1)%5) : undefined} 
+          className={`relative w-full aspect-square max-w-md ${!isMapView ? 'cursor-pointer active:scale-95' : ''} group select-none transition-transform duration-200`}
+        >
           <div className="absolute inset-0 rounded-full border-[18px] border-zinc-900 shadow-[0_0_80px_rgba(0,0,0,0.8)] z-30 pointer-events-none ring-1 ring-white/10"></div>
           <div className="absolute inset-0 rounded-full overflow-hidden bg-black z-10 border border-white/5">
             {!isMapView ? (
-              <RadarUI range={radarStep === 0 ? state.range : state.range * (radarStep === 1 ? 0.5 : radarStep === 2 ? 0.2 : 0.05)} userLoc={effectiveCenter} balls={state.dragonBalls} onBallClick={setSelectedBall} design={state.design} />
+              <>
+                <RadarUI range={currentRadarRange} userLoc={effectiveCenter} balls={state.dragonBalls} onBallClick={setSelectedBall} design={state.design} />
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm pointer-events-none animate-in fade-in slide-in-from-bottom-2">
+                   <p className="text-[10px] font-black tracking-widest uppercase flex items-center gap-2">
+                      <Target size={10} /> ÉCHELLE: {currentRadarRange.toFixed(currentRadarRange < 1 ? 2 : 1)} KM
+                   </p>
+                </div>
+              </>
             ) : (
-              <div className={`w-full h-full ${mapTheme === 'dark' ? 'radar-theme' : ''}`}>
+              <div className={`w-full h-full relative ${mapTheme === 'dark' ? 'radar-theme' : ''}`}>
                 {effectiveCenter && (
                   <MapContainer center={[effectiveCenter.lat, effectiveCenter.lng]} zoom={12} zoomControl={false} className="h-full w-full">
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -471,6 +486,14 @@ const App: React.FC = () => {
                     {state.dragonBalls.map(b => <Marker key={b.id} position={[b.lat, b.lng]} icon={createDragonBallIcon(b.stars, b.found)} />)}
                   </MapContainer>
                 )}
+                {/* Bouton de thème INTERNE au radar, tout rond */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setMapTheme(p => p==='dark'?'light':'dark'); }} 
+                  className="absolute top-24 right-14 z-[1001] w-12 h-12 bg-black/80 text-white rounded-full border-2 shadow-2xl flex items-center justify-center active:scale-90 transition-all hover:bg-white/10"
+                  style={{ borderColor: radarColor }}
+                >
+                  {mapTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
               </div>
             )}
             
@@ -486,21 +509,34 @@ const App: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="absolute -bottom-12 left-0 right-0 text-center opacity-40 font-mono text-[10px] tracking-[0.5em] uppercase">
-            {isMapView ? "Retour Radar" : "Zoom Cyclique"}
+          <div className="absolute -bottom-12 left-0 right-0 text-center opacity-40 font-mono text-[9px] tracking-[0.4em] uppercase">
+            {isMapView ? "Exploration Interactive" : "Tap pour Zoom cyclique"}
           </div>
         </div>
 
-        <div className="mt-20 flex flex-col items-center gap-8 w-full max-w-md">
+        {/* Interface Map - Bouton RETOUR positionné à l'extérieur du radar */}
+        {isMapView && (
+          <div className="mt-8 flex animate-in fade-in slide-in-from-top-4 duration-300">
+            <button 
+              onClick={() => setRadarStep(0)} 
+              className="px-6 py-4 bg-black/80 text-white rounded-2xl border-2 shadow-2xl flex items-center gap-3 font-black text-[12px] uppercase active:scale-95 transition-all hover:bg-white/10"
+              style={{ borderColor: radarColor }}
+            >
+              <ArrowLeft size={20}/> RETOUR RADAR
+            </button>
+          </div>
+        )}
+
+        <div className={`${isMapView ? 'mt-12' : 'mt-24'} flex flex-col items-center gap-8 w-full max-w-md transition-all duration-500`}>
           {/* Gestion de la portée */}
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-4 px-4">
              <div className="flex items-center justify-between px-2">
-                <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest flex items-center gap-2"><Sliders size={12}/> Portée de Scan</span>
+                <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest flex items-center gap-2">Portée de Scan</span>
                 <span className="text-xs font-black" style={{ color: radarColor }}>{state.range} KM</span>
              </div>
              <div className="flex justify-center gap-2 w-full">
                 {[1, 10, 100, 1000].map((r) => (
-                    <button key={r} onClick={() => setState(p => ({...p, range: r}))} className={`flex-1 py-3 text-[10px] font-black rounded-2xl border transition-all ${state.range === r ? 'text-black' : 'bg-black/40 text-white border-white/10'}`} style={{ backgroundColor: state.range === r ? radarColor : undefined, borderColor: state.range === r ? radarColor : undefined }}>
+                    <button key={r} onClick={() => setState(p => ({...p, range: r}))} className={`flex-1 py-3 text-[9px] font-black rounded-xl border transition-all ${state.range === r ? 'text-black shadow-lg' : 'bg-black/40 text-white border-white/10'}`} style={{ backgroundColor: state.range === r ? radarColor : undefined, borderColor: state.range === r ? radarColor : undefined }}>
                         {r}KM
                     </button>
                 ))}
@@ -508,15 +544,15 @@ const App: React.FC = () => {
                     <button onClick={() => {
                         const val = prompt("Entrez la portée en KM (min 1) :");
                         if(val && !isNaN(Number(val)) && Number(val) >= 1) setState(p => ({...p, range: Number(val)}));
-                    }} className={`flex-1 py-3 text-[10px] font-black rounded-2xl border transition-all ${state.range > 1000 ? 'bg-blue-600 text-white' : 'bg-white/5 text-blue-400 border-blue-400/30'}`}>
+                    }} className={`flex-1 py-3 text-[9px] font-black rounded-xl border transition-all ${state.range > 1000 ? 'bg-blue-600 text-white' : 'bg-white/5 text-blue-400 border-blue-400/30'}`}>
                         LIBRE
                     </button>
                 )}
              </div>
           </div>
 
-          <button onClick={searchBalls} disabled={state.isLoading || !effectiveCenter} className="w-full py-6 text-white font-black rounded-[2rem] flex items-center justify-center gap-4 uppercase tracking-[0.2em] disabled:opacity-50 shadow-2xl transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: '#ff7700' }}>
-            {state.isLoading ? <RefreshCcw className="animate-spin" /> : <Zap className="w-6 h-6 fill-current" />}
+          <button onClick={searchBalls} disabled={state.isLoading || !effectiveCenter} className="w-full py-5 text-white font-black rounded-2xl flex items-center justify-center gap-4 uppercase tracking-[0.15em] disabled:opacity-50 shadow-2xl transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: '#ff7700' }}>
+            {state.isLoading ? <RefreshCcw className="animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
             {state.isLoading ? "Analyse..." : "Lancer le Scan"}
           </button>
         </div>
@@ -530,7 +566,7 @@ const App: React.FC = () => {
                 <p className="text-[11px] opacity-60 uppercase font-mono mt-2 flex items-center gap-2"><MapPin size={10}/> {selectedBall.name}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] opacity-40 font-mono uppercase tracking-widest mb-1">Cible</p>
+                <p className="text-[10px] opacity-40 font-mono uppercase tracking-widest mb-1">Distance</p>
                 <p className={`text-2xl font-black ${selectedBall.found ? 'text-emerald-500' : 'text-white'}`}>
                     {selectedBall.found ? 'REÇUE' : currentDistToSelected || '---'}
                 </p>
