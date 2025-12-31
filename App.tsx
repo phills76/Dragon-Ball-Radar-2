@@ -18,11 +18,11 @@ const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
 });
 
 const RACES = [
-  { name: 'Humain', icon: '👨‍💼', desc: 'Citoyen de la Terre' },
-  { name: 'Sayan', icon: '🔥', desc: 'Guerrier de l\'espace' },
-  { name: 'Namek', icon: '🌵', desc: 'Sagesse ancestrale' },
+  { name: 'Terrien', icon: '👨‍💼', desc: 'Habitant de la Terre' },
   { name: 'Cyborg', icon: '🤖', desc: 'Puissance infinie' },
+  { name: 'Namek', icon: '🌵', desc: 'Sagesse ancestrale' },
   { name: 'Démon', icon: '😈', desc: 'Royaume des ténèbres' },
+  { name: 'Saiyan', icon: '🔥', desc: 'Guerrier de l\'espace' },
   { name: 'Dieu', icon: '✨', desc: 'Entité divine' }
 ];
 
@@ -62,7 +62,7 @@ const App: React.FC = () => {
       design: 'bulma',
       collectionRadius: 0.05, 
       unlockedFeatures: [],
-      currentRace: 'Humain'
+      currentRace: 'Terrien'
     };
     return saved ? { ...defaultState, ...JSON.parse(saved) } : defaultState;
   });
