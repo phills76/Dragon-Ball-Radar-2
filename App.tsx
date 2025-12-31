@@ -18,19 +18,19 @@ const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
 });
 
 const RACES = [
-  { name: 'Terrien', icon: '👨‍💼', desc: 'Habitant de la Terre' },
-  { name: 'Cyborg', icon: '🤖', desc: 'Puissance infinie' },
-  { name: 'Namek', icon: '🌵', desc: 'Sagesse ancestrale' },
-  { name: 'Démon', icon: '😈', desc: 'Royaume des ténèbres' },
-  { name: 'Saiyan', icon: '🔥', desc: 'Guerrier de l\'espace' },
-  { name: 'Dieu', icon: '✨', desc: 'Entité divine' }
+  { id: 'Terrien', name: 'Terrien', icon: '👨‍💼', desc: 'Habitant de la Terre', req: null },
+  { id: 'Cyborg', name: 'Cyborg', icon: '🤖', desc: 'Puissance infinie', req: '7 boules de cristal' },
+  { id: 'Namek', name: 'Namek', icon: '🌵', desc: 'Sagesse ancestrale', req: 'Maîtrise Cyborg' },
+  { id: 'Démon', name: 'Démon', icon: '😈', desc: 'Royaume des ténèbres', req: 'Maîtrise Namek' },
+  { id: 'Saiyan', name: 'Saiyan', icon: '🔥', desc: 'Guerrier de l\'espace', req: 'Evolution Démon' },
+  { id: 'Dieu', name: 'Dieu', icon: '✨', desc: 'Entité divine', req: 'Maîtrise Saiyan' }
 ];
 
 const MASTERY_LEVELS = [
-  { radius: 50, label: 'Terrien' },
-  { radius: 25, label: 'Cyborg' },
-  { radius: 10, label: 'Namek' },
-  { radius: 1, label: 'Saiyan' }
+  { radius: 0.05, label: 'Terrien', name: 'Terrien', req: null },
+  { radius: 0.025, label: 'Cyborg', name: 'Cyborg', req: 'Race Cyborg' },
+  { radius: 0.01, label: 'Namek', name: 'Namek', req: 'Race Namek' },
+  { radius: 0.001, label: 'Saiyan', name: 'Saiyan', req: 'Race Saiyan' }
 ];
 
 const MapAutoView: React.FC<{ center: [number, number], range: number }> = ({ center, range }) => {
@@ -58,7 +58,7 @@ const MapPicker: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({ o
 
 const App: React.FC = () => {
   const [state, setState] = useState<RadarState>(() => {
-    const saved = localStorage.getItem('radar_save_v11');
+    const saved = localStorage.getItem('radar_save_v12');
     const defaultState: RadarState = {
       range: 10,
       userLocation: null,
@@ -86,7 +86,7 @@ const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('radar_save_v11', JSON.stringify(state));
+    localStorage.setItem('radar_save_v12', JSON.stringify(state));
   }, [state]);
 
   useEffect(() => {
@@ -114,6 +114,7 @@ const App: React.FC = () => {
   };
 
   const effectiveCenter = state.scanCenter || state.userLocation;
+  const foundCount = state.dragonBalls.filter(b => b.found).length;
 
   const searchBalls = async () => {
     if (!effectiveCenter) return;
@@ -128,15 +129,6 @@ const App: React.FC = () => {
     }
   };
 
-  const foundCount = state.dragonBalls.filter(b => b.found).length;
-  const isMapView = radarStep === 4;
-
-  const isWorldScanAvailable = useMemo(() => {
-    return state.unlockedFeatures.includes('scouter') && 
-           state.unlockedFeatures.includes('custom_zone') && 
-           state.collectionRadius <= 0.001;
-  }, [state.unlockedFeatures, state.collectionRadius]);
-
   useEffect(() => {
     if (!state.userLocation || state.dragonBalls.length === 0) return;
     const updatedBalls = state.dragonBalls.map(ball => {
@@ -149,21 +141,52 @@ const App: React.FC = () => {
     }
   }, [state.userLocation, state.dragonBalls, state.collectionRadius]);
 
+  // VÉRIFICATION DES PRÉ-REQUIS POUR CHAQUE VŒU
+  const checkPrerequisite = useCallback((type: string, id: string): { ok: boolean, reason: string } => {
+    if (type === 'design') return { ok: true, reason: '' };
+
+    if (type === 'race') {
+      if (id === 'Cyborg') return { ok: true, reason: '' };
+      if (id === 'Namek') return { ok: state.collectionRadius <= 0.025, reason: 'Requis : Maîtrise Cyborg' };
+      if (id === 'Démon') return { ok: state.collectionRadius <= 0.01, reason: 'Requis : Maîtrise Namek' };
+      if (id === 'Saiyan') return { ok: state.currentRace === 'Démon', reason: 'Requis : Évolution Démon' };
+      if (id === 'Dieu') return { ok: state.collectionRadius <= 0.001, reason: 'Requis : Maîtrise Saiyan' };
+      return { ok: false, reason: 'Inconnu' };
+    }
+
+    if (type === 'mastery') {
+      const radius = parseFloat(id);
+      if (radius === 0.025) return { ok: state.currentRace === 'Cyborg', reason: 'Requis : Race Cyborg' };
+      if (radius === 0.01) return { ok: state.currentRace === 'Namek', reason: 'Requis : Race Namek' };
+      if (radius === 0.001) return { ok: state.currentRace === 'Saiyan', reason: 'Requis : Race Saiyan' };
+      return { ok: false, reason: 'Inconnu' };
+    }
+
+    if (type === 'unlock') {
+      if (id === 'scouter') return { ok: state.currentRace === 'Dieu', reason: 'Requis : Race Dieu' };
+      if (id === 'custom_zone') return { ok: state.unlockedFeatures.includes('scouter'), reason: 'Requis : Mode Scouter' };
+      if (id === 'world_scan') return { ok: state.unlockedFeatures.includes('custom_zone'), reason: 'Requis : Zone Perso' };
+    }
+
+    return { ok: false, reason: 'Bloqué' };
+  }, [state.currentRace, state.collectionRadius, state.unlockedFeatures]);
+
   const handleShenronWish = (type: string, value: any, unlockKey?: string) => {
     if (foundCount < 7) {
       alert("Il vous faut les 7 Dragon Balls pour exaucer ce vœu !");
       return;
     }
 
-    if (unlockKey === 'world_scan' && !isWorldScanAvailable) {
-      alert("Ce vœu suprême nécessite d'avoir d'abord débloqué le Scouter, la Zone Perso et la Maîtrise de Collecte à 1m !");
+    const { ok, reason } = checkPrerequisite(type, unlockKey || value.toString());
+    if (!ok) {
+      alert(reason);
       return;
     }
     
     setState(prev => {
       const newState = { ...prev };
       if (type === 'design') newState.design = value;
-      if (type === 'radius') newState.collectionRadius = value;
+      if (type === 'mastery') newState.collectionRadius = value;
       if (type === 'race') newState.currentRace = value;
       if (unlockKey && !newState.unlockedFeatures.includes(unlockKey)) {
         newState.unlockedFeatures = [...newState.unlockedFeatures, unlockKey];
@@ -174,13 +197,6 @@ const App: React.FC = () => {
       setShowWishes(false);
       return newState;
     });
-  };
-
-  const getNextRadius = () => {
-    if (state.collectionRadius > 0.025) return 0.025;
-    if (state.collectionRadius > 0.01) return 0.01;
-    if (state.collectionRadius > 0.001) return 0.001;
-    return 0.001;
   };
 
   const toggleScouter = async () => {
@@ -211,6 +227,8 @@ const App: React.FC = () => {
     const multipliers = [1, 0.5, 0.2, 0.05];
     return state.range * (multipliers[radarStep] || 1);
   }, [state.range, radarStep]);
+
+  const isMapView = radarStep === 4;
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 transition-colors duration-1000" style={{ color: radarColor }}>
@@ -299,15 +317,16 @@ const App: React.FC = () => {
                     <h2 className="text-3xl sm:text-4xl font-black flex items-center gap-5 uppercase tracking-tighter" style={{ color: radarColor }}>
                         <Wand2 size={36} /> Sanctuaire
                     </h2>
-                    <p className="text-[11px] font-mono opacity-50 mt-2 uppercase tracking-[0.4em]">Bibliothèque des vœux de Shenron</p>
+                    <p className="text-[11px] font-mono opacity-50 mt-2 uppercase tracking-[0.4em]">Chemin de la Divinité</p>
                 </div>
                 <button onClick={() => setShowWishes(false)} className="p-4 bg-white/5 hover:bg-white/10 rounded-full transition-all border border-white/5"><X size={24}/></button>
              </header>
 
              <div className="space-y-16">
+                {/* 1. DESIGNS (LIBRES) */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Map size={16} /> 1. Personnalisation du Radar
+                        <Map size={16} /> 1. Personnalisation du Radar (Libre)
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
@@ -320,28 +339,44 @@ const App: React.FC = () => {
                                 <div className="w-14 h-14 rounded-full mb-5 shadow-2xl transition-transform group-hover:rotate-12" style={{ backgroundColor: d.color }}></div>
                                 <span className="text-[11px] font-black uppercase mb-2">{d.name}</span>
                                 <span className="text-[9px] opacity-40 leading-tight">{d.desc}</span>
+                                {state.design === d.id && <span className="mt-2 text-[8px] font-black text-white/40 uppercase">Actif</span>}
                             </button>
                         ))}
                     </div>
                 </section>
 
+                {/* 2. RACES (PRÉ-REQUIS) */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <User size={16} /> 2. Évolution de Race (Actuelle: {state.currentRace})
+                        <User size={16} /> 2. Évolution de Race (Chaîne d'Evolution)
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                        {RACES.map(r => (
-                            <button key={r.name} onClick={() => handleShenronWish('race', r.name)} className={`p-5 border rounded-2xl flex flex-col items-center transition-all ${state.currentRace === r.name ? 'bg-white text-black border-white shadow-lg scale-105' : 'bg-white/5 border-white/10 opacity-60 hover:opacity-100'}`}>
-                                <span className="text-3xl mb-3">{r.icon}</span>
-                                <span className="text-[10px] font-black uppercase tracking-tighter">{r.name}</span>
-                            </button>
-                        ))}
+                        {RACES.map(r => {
+                            const { ok, reason } = checkPrerequisite('race', r.id);
+                            const isCurrent = state.currentRace === r.id;
+                            const isUnlocked = state.currentRace === r.id || (r.id === 'Cyborg' && state.collectionRadius < 0.05) || (r.id === 'Namek' && state.collectionRadius < 0.025);
+                            
+                            return (
+                                <button key={r.id} onClick={() => handleShenronWish('race', r.id)} className={`p-5 border rounded-2xl flex flex-col items-center transition-all relative overflow-hidden ${isCurrent ? 'bg-white text-black border-white shadow-lg' : ok ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-black/40 border-white/5 opacity-30 cursor-not-allowed'}`}>
+                                    <span className="text-3xl mb-3">{r.icon}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">{r.name}</span>
+                                    {isCurrent ? (
+                                        <span className="text-[8px] font-black uppercase mt-1 text-black/40">Acquis</span>
+                                    ) : !ok ? (
+                                        <span className="text-[7px] font-mono mt-1 opacity-60 text-red-400">{reason}</span>
+                                    ) : (
+                                        <span className="text-[8px] font-black uppercase mt-1 text-emerald-400">Disponible</span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </section>
 
+                {/* 3. MAÎTRISE (DÉPEND DE LA RACE) */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Target size={16} /> 3. Maîtrise de Collecte
+                        <Target size={16} /> 3. Maîtrise de Collecte (Liée à l'Evolution)
                     </h3>
                     <div className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col sm:flex-row items-center gap-8">
                         <div className="relative">
@@ -353,95 +388,105 @@ const App: React.FC = () => {
                         <div className="flex-1 text-center sm:text-left">
                             <h4 className="font-black text-xl mb-4 uppercase">Rayon Actuel: {state.collectionRadius * 1000} Mètres</h4>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                                {MASTERY_LEVELS.map(m => (
-                                    <div key={m.radius} className={`p-3 rounded-2xl border flex flex-col items-center transition-all ${state.collectionRadius * 1000 === m.radius ? 'bg-orange-500 border-yellow-400 shadow-lg' : 'bg-white/5 border-white/10 opacity-40'}`}>
-                                        <span className={`text-[11px] font-black uppercase ${state.collectionRadius * 1000 === m.radius ? 'text-white' : ''}`}>{m.label}</span>
-                                        <span className={`text-[9px] font-mono mt-1 ${state.collectionRadius * 1000 === m.radius ? 'text-white/80' : ''}`}>{m.radius}M</span>
-                                    </div>
-                                ))}
+                                {MASTERY_LEVELS.map(m => {
+                                    const { ok, reason } = checkPrerequisite('mastery', m.radius.toString());
+                                    const isCurrent = state.collectionRadius === m.radius;
+                                    const isPassed = state.collectionRadius < m.radius;
+
+                                    return (
+                                        <div key={m.radius} className={`p-4 rounded-2xl border flex flex-col items-center transition-all ${isCurrent ? 'bg-orange-500 border-yellow-400 shadow-lg' : isPassed ? 'bg-emerald-500/10 border-emerald-500/30 opacity-60' : ok ? 'bg-white/10 border-white/30' : 'bg-black/40 border-white/5 opacity-30'}`}>
+                                            <span className={`text-[11px] font-black uppercase ${isCurrent ? 'text-white' : ''}`}>{m.label}</span>
+                                            <span className={`text-[9px] font-mono mt-1 ${isCurrent ? 'text-white/80' : ''}`}>{m.radius * 1000}M</span>
+                                            {isCurrent ? <span className="text-[7px] font-black mt-2 text-white/50 uppercase">Actif</span> : !ok && !isPassed && <span className="text-[7px] text-red-400 mt-2 text-center uppercase leading-tight font-mono">{reason}</span>}
+                                        </div>
+                                    );
+                                })}
                             </div>
                             {state.collectionRadius > 0.001 ? (
-                                <button onClick={() => handleShenronWish('radius', getNextRadius())} className={`px-10 py-4 rounded-xl font-black text-xs uppercase transition-all ${foundCount === 7 ? 'bg-orange-500 text-white shadow-xl hover:scale-105' : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'}`}>
-                                    {foundCount === 7 ? `Passer à ${(getNextRadius()*1000)}M` : "Shenron Requis"}
+                                <button 
+                                    onClick={() => {
+                                        const next = MASTERY_LEVELS.find(m => m.radius < state.collectionRadius);
+                                        if (next) handleShenronWish('mastery', next.radius);
+                                    }} 
+                                    className={`px-10 py-4 rounded-xl font-black text-xs uppercase transition-all ${foundCount === 7 && checkPrerequisite('mastery', MASTERY_LEVELS.find(m => m.radius < state.collectionRadius)?.radius.toString() || '0').ok ? 'bg-orange-500 text-white shadow-xl hover:scale-105' : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'}`}
+                                >
+                                    {foundCount === 7 ? "Évoluer la Maîtrise" : "7 boules requises"}
                                 </button>
-                            ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest flex items-center gap-2 justify-center sm:justify-start"><CheckCircle2 size={16}/> Maîtrise Ultime Débloquée</span>}
+                            ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest flex items-center gap-2 justify-center sm:justify-start"><CheckCircle2 size={16}/> Maîtrise Saiyan Débloquée</span>}
                         </div>
                     </div>
                 </section>
 
+                {/* 4. CAPACITÉS (DERNIÈRES ÉTAPES) */}
                 <section>
                     <h3 className="text-xs font-mono opacity-40 mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Sparkles size={16} /> 4. Capacités Spéciales
+                        <Sparkles size={16} /> 4. Capacités Suprêmes (Post-Dieu)
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('scouter') ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)]' : 'bg-white/5 border-white/10'}`}>
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-5 bg-black/40 rounded-3xl"><Camera size={36} className={state.unlockedFeatures.includes('scouter') ? 'text-emerald-400' : 'text-white/20'}/></div>
-                                {state.unlockedFeatures.includes('scouter') ? <span className="bg-emerald-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">DISPONIBLE</span>}
-                            </div>
-                            <h4 className="font-black text-lg mb-2 uppercase">Mode Scouter (AR)</h4>
-                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Vision en réalité augmentée pour localiser précisément les boules.</p>
-                            {!state.unlockedFeatures.includes('scouter') && (
-                                <button onClick={() => handleShenronWish('unlock', true, 'scouter')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>Invoquer</button>
-                            )}
+                        {/* SCOUTER */}
+                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('scouter') ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}>
+                            {(() => {
+                                const { ok, reason } = checkPrerequisite('unlock', 'scouter');
+                                return (
+                                    <>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="p-5 bg-black/40 rounded-3xl"><Camera size={36} className={state.unlockedFeatures.includes('scouter') ? 'text-emerald-400' : 'text-white/20'}/></div>
+                                            {state.unlockedFeatures.includes('scouter') ? <span className="bg-emerald-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">BLOQUÉ</span>}
+                                        </div>
+                                        <h4 className="font-black text-lg mb-2 uppercase">Mode Scouter</h4>
+                                        <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Vision AR pour les élus de rang Dieu.</p>
+                                        {!state.unlockedFeatures.includes('scouter') && (
+                                            <button onClick={() => handleShenronWish('unlock', true, 'scouter')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && ok ? 'bg-emerald-600 text-white' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>
+                                                {ok ? "Invoquer" : reason}
+                                            </button>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
 
-                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('custom_zone') ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.1)]' : 'bg-white/5 border-white/10'}`}>
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-5 bg-black/40 rounded-3xl"><MapPin size={36} className={state.unlockedFeatures.includes('custom_zone') ? 'text-blue-400' : 'text-white/20'}/></div>
-                                {state.unlockedFeatures.includes('custom_zone') ? <span className="bg-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">DISPONIBLE</span>}
-                            </div>
-                            <h4 className="font-black text-lg mb-2 uppercase">Zone Personnalisée</h4>
-                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Libérez la portée du radar et choisissez votre zone.</p>
-                            {!state.unlockedFeatures.includes('custom_zone') && (
-                                <button onClick={() => handleShenronWish('unlock', true, 'custom_zone')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>Invoquer</button>
-                            )}
+                        {/* ZONE PERSO */}
+                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('custom_zone') ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10'}`}>
+                            {(() => {
+                                const { ok, reason } = checkPrerequisite('unlock', 'custom_zone');
+                                return (
+                                    <>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="p-5 bg-black/40 rounded-3xl"><MapPin size={36} className={state.unlockedFeatures.includes('custom_zone') ? 'text-blue-400' : 'text-white/20'}/></div>
+                                            {state.unlockedFeatures.includes('custom_zone') ? <span className="bg-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">BLOQUÉ</span>}
+                                        </div>
+                                        <h4 className="font-black text-lg mb-2 uppercase">Zone Perso</h4>
+                                        <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Libérez la portée du radar.</p>
+                                        {!state.unlockedFeatures.includes('custom_zone') && (
+                                            <button onClick={() => handleShenronWish('unlock', true, 'custom_zone')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && ok ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>
+                                                {ok ? "Invoquer" : reason}
+                                            </button>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
 
-                        <div className={`p-8 rounded-[2.5rem] border transition-all relative overflow-hidden ${state.unlockedFeatures.includes('world_scan') ? 'bg-indigo-500/10 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : isWorldScanAvailable ? 'bg-white/10 border-indigo-500/30' : 'bg-black/40 border-white/5 opacity-50'}`}>
-                            {!isWorldScanAvailable && !state.unlockedFeatures.includes('world_scan') && (
-                                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center p-6 text-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Lock size={24} className="text-white/40 mb-2"/>
-                                        <p className="text-[9px] font-mono text-white/60 uppercase leading-relaxed">
-                                            Vœu Suprême Verrouillé<br/>
-                                            Complétez Scouter, Zone & Maîtrise
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-5 bg-black/40 rounded-3xl"><Globe size={36} className={state.unlockedFeatures.includes('world_scan') ? 'text-indigo-400' : 'text-white/20'}/></div>
-                                {state.unlockedFeatures.includes('world_scan') ? <span className="bg-indigo-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">ULTIME</span>}
-                            </div>
-                            <h4 className="font-black text-lg mb-2 uppercase">Vision Planétaire</h4>
-                            <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Détectez les boules à l'échelle mondiale (20 000 km).</p>
-                            
-                            {!state.unlockedFeatures.includes('world_scan') && (
-                                <button 
-                                    onClick={() => handleShenronWish('unlock', true, 'world_scan')} 
-                                    className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && isWorldScanAvailable ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
-                                >
-                                    {isWorldScanAvailable ? "Invoquer l'Ultime" : "Pré-requis requis"}
-                                </button>
-                            )}
-
-                            {!state.unlockedFeatures.includes('world_scan') && (
-                                <div className="mt-4 space-y-1">
-                                    <div className="flex items-center gap-2 text-[8px] font-mono uppercase">
-                                        {state.unlockedFeatures.includes('scouter') ? <CheckCircle2 size={10} className="text-emerald-500"/> : <div className="w-2.5 h-2.5 rounded-full border border-white/20"/>}
-                                        <span className={state.unlockedFeatures.includes('scouter') ? 'text-emerald-500' : 'opacity-40'}>Scouter AR</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[8px] font-mono uppercase">
-                                        {state.unlockedFeatures.includes('custom_zone') ? <CheckCircle2 size={10} className="text-emerald-500"/> : <div className="w-2.5 h-2.5 rounded-full border border-white/20"/>}
-                                        <span className={state.unlockedFeatures.includes('custom_zone') ? 'text-emerald-500' : 'opacity-40'}>Zone Personnalisée</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[8px] font-mono uppercase">
-                                        {state.collectionRadius <= 0.001 ? <CheckCircle2 size={10} className="text-emerald-500"/> : <div className="w-2.5 h-2.5 rounded-full border border-white/20"/>}
-                                        <span className={state.collectionRadius <= 0.001 ? 'text-emerald-500' : 'opacity-40'}>Maîtrise Collecte (1m)</span>
-                                    </div>
-                                </div>
-                            )}
+                        {/* VISION PLANÉTAIRE */}
+                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('world_scan') ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/10'}`}>
+                            {(() => {
+                                const { ok, reason } = checkPrerequisite('unlock', 'world_scan');
+                                return (
+                                    <>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="p-5 bg-black/40 rounded-3xl"><Globe size={36} className={state.unlockedFeatures.includes('world_scan') ? 'text-indigo-400' : 'text-white/20'}/></div>
+                                            {state.unlockedFeatures.includes('world_scan') ? <span className="bg-indigo-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5">ULTIME</span>}
+                                        </div>
+                                        <h4 className="font-black text-lg mb-2 uppercase">Vision Planétaire</h4>
+                                        <p className="text-[11px] opacity-50 mb-8 leading-relaxed">Détectez les boules partout sur Terre.</p>
+                                        {!state.unlockedFeatures.includes('world_scan') && (
+                                            <button onClick={() => handleShenronWish('unlock', true, 'world_scan')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && ok ? 'bg-indigo-600 text-white' : 'bg-white/5 text-white/20 cursor-not-allowed'}`}>
+                                                {ok ? "Invoquer" : reason}
+                                            </button>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
                 </section>
@@ -451,7 +496,7 @@ const App: React.FC = () => {
                 <p className="text-yellow-500/80 font-mono text-[11px] uppercase tracking-[0.3em] leading-loose">
                     Invoquer Shenron nécessite 7 Dragon Balls.<br/>
                     Actuellement: <span className="text-yellow-500 font-black text-lg">{foundCount}/7</span><br/>
-                    Un vœu exaucé consomme et disperse les boules.
+                    Un vœu exaucé disperse les boules à nouveau.
                 </p>
              </div>
           </div>
@@ -467,11 +512,10 @@ const App: React.FC = () => {
                 <button onClick={() => setShowInstructions(false)} className="p-2 hover:bg-white/5 rounded-full transition-all"><X size={24}/></button>
              </header>
              <div className="space-y-6 text-sm font-mono leading-relaxed" style={{ color: `${radarColor}cc` }}>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>1. Utilisez le RADAR pour localiser les 7 Dragon Balls dispersées autour de vous.</p>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>2. Cliquez sur le RADAR pour changer d'échelle (Zoom cyclique).</p>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>3. Atteignez physiquement la position d'une boule pour la collecter automatiquement.</p>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>4. Une fois les 7 boules réunies, invoquez SHENRON pour débloquer des capacités. Notez que la Vision Planétaire est le vœu final, débloqué seulement après tous les autres.</p>
-                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>5. Changez votre race et votre design de radar via le Sanctuaire pour varier votre expérience.</p>
+                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>1. Utilisez le RADAR pour localiser les 7 Dragon Balls.</p>
+                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>2. Cliquez sur le RADAR pour changer d'échelle.</p>
+                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>3. Atteignez physiquement la position d'une boule pour la collecter.</p>
+                <p className="border-l-2 pl-4" style={{ borderColor: radarColor }}>4. Invoquez SHENRON pour évoluer. Chaque race et maîtrise débloque l'étape suivante de votre destin.</p>
              </div>
           </div>
         </div>
