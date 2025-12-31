@@ -26,6 +26,13 @@ const RACES = [
   { name: 'Dieu', icon: '✨', desc: 'Entité divine' }
 ];
 
+const MASTERY_LEVELS = [
+  { radius: 50, label: 'Terrien' },
+  { radius: 25, label: 'Cyborg' },
+  { radius: 10, label: 'Namek' },
+  { radius: 1, label: 'Saiyan' }
+];
+
 const MapAutoView: React.FC<{ center: [number, number], range: number }> = ({ center, range }) => {
   const map = useMap();
   const zoomLevel = useMemo(() => {
@@ -344,15 +351,18 @@ const App: React.FC = () => {
                             <div className="absolute inset-0 animate-ping opacity-20 border-2 border-orange-500 rounded-full"></div>
                         </div>
                         <div className="flex-1 text-center sm:text-left">
-                            <h4 className="font-black text-xl mb-2 uppercase">Rayon Actuel: {state.collectionRadius * 1000} Mètres</h4>
-                            <div className="flex gap-2 mb-6 justify-center sm:justify-start">
-                                {[50, 25, 10, 1].map(r => (
-                                    <div key={r} className={`px-3 py-1 rounded-full text-[9px] font-black ${state.collectionRadius * 1000 === r ? 'bg-orange-500 text-white' : 'bg-white/10 opacity-40'}`}>{r}M</div>
+                            <h4 className="font-black text-xl mb-4 uppercase">Rayon Actuel: {state.collectionRadius * 1000} Mètres</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+                                {MASTERY_LEVELS.map(m => (
+                                    <div key={m.radius} className={`p-3 rounded-2xl border flex flex-col items-center transition-all ${state.collectionRadius * 1000 === m.radius ? 'bg-orange-500 border-yellow-400 shadow-lg' : 'bg-white/5 border-white/10 opacity-40'}`}>
+                                        <span className={`text-[11px] font-black uppercase ${state.collectionRadius * 1000 === m.radius ? 'text-white' : ''}`}>{m.label}</span>
+                                        <span className={`text-[9px] font-mono mt-1 ${state.collectionRadius * 1000 === m.radius ? 'text-white/80' : ''}`}>{m.radius}M</span>
+                                    </div>
                                 ))}
                             </div>
                             {state.collectionRadius > 0.001 ? (
                                 <button onClick={() => handleShenronWish('radius', getNextRadius())} className={`px-10 py-4 rounded-xl font-black text-xs uppercase transition-all ${foundCount === 7 ? 'bg-orange-500 text-white shadow-xl hover:scale-105' : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'}`}>
-                                    {foundCount === 7 ? `Passer à ${getNextRadius()*1000}M` : "Shenron Requis"}
+                                    {foundCount === 7 ? `Passer à ${(getNextRadius()*1000)}M` : "Shenron Requis"}
                                 </button>
                             ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest flex items-center gap-2 justify-center sm:justify-start"><CheckCircle2 size={16}/> Maîtrise Ultime Débloquée</span>}
                         </div>
