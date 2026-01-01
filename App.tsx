@@ -213,7 +213,12 @@ const App: React.FC = () => {
     }
   };
 
-  const radarColor = { bulma: '#10b981', capsule: '#3b82f6', saiyan: '#fbbf24', namek: '#8b5cf6' }[state.design];
+  const radarColor = { 
+    bulma: '#10b981', 
+    capsule: '#3b82f6', 
+    saiyan: '#fbbf24', 
+    namek: '#4ade80' 
+  }[state.design];
 
   const currentDistToSelected = useMemo(() => {
     if (!selectedBall || !state.userLocation) return null;
@@ -333,13 +338,33 @@ const App: React.FC = () => {
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
-                            { id: 'bulma', name: 'Original Bulma', color: '#10b981', desc: 'Le classique vert.' },
-                            { id: 'capsule', name: 'Capsule Corp.', color: '#3b82f6', desc: 'Design épuré et High-Tech.' },
+                            { id: 'bulma', name: 'Original Bulma', color: '#10b981', desc: 'Thème vert classique.', image: 'https://drive.google.com/uc?id=1cJ9gATntST-w6duw9fSBjgDx7ExciGSE' },
+                            { id: 'capsule', name: 'Capsule Corp.', color: '#3b82f6', desc: 'Thème bleu technologique.' },
                             { id: 'saiyan', name: 'Radar Sayen', color: '#fbbf24', desc: 'Thème doré Super Dragon.' },
-                            { id: 'namek', name: 'Radar Namek', color: '#8b5cf6', desc: 'Mystique bleu et violet.' }
+                            { id: 'namek', name: 'Radar Namek', color: '#4ade80', desc: 'Thème vert alien mystique.' }
                         ].map(d => (
                             <button key={d.id} onClick={() => handleShenronWish('design', d.id)} className={`p-6 border rounded-[2rem] transition-all flex flex-col items-center text-center group ${state.design === d.id ? 'bg-white/20 border-white scale-105 shadow-xl' : 'bg-black/40 border-white/10 opacity-90 hover:opacity-100 hover:bg-black/60'}`}>
-                                <div className="w-14 h-14 rounded-full mb-5 shadow-2xl transition-transform group-hover:rotate-12" style={{ backgroundColor: d.color }}></div>
+                                <div className="w-14 h-14 rounded-full mb-5 shadow-2xl transition-transform group-hover:rotate-12 flex items-center justify-center overflow-hidden bg-black/20" style={{ borderColor: d.color }}>
+                                    {(d as any).image ? (
+                                        <img 
+                                          src={(d as any).image} 
+                                          alt="" 
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-contain"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            if (!target.src.includes('thumbnail')) {
+                                              target.src = target.src.replace('uc?id=', 'thumbnail?id=') + '&sz=w200';
+                                            } else {
+                                              target.style.display = 'none';
+                                              (target.parentElement as HTMLElement).style.backgroundColor = d.color;
+                                            }
+                                          }}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full" style={{ backgroundColor: d.color }}></div>
+                                    )}
+                                </div>
                                 <span className="text-[11px] font-black uppercase mb-2 text-white">{d.name}</span>
                                 <span className="text-[9px] text-white/80 leading-tight">{d.desc}</span>
                                 {state.design === d.id && <span className="mt-2 text-[8px] font-black text-white uppercase">Actif</span>}
@@ -413,76 +438,6 @@ const App: React.FC = () => {
                                     {foundCount === 7 ? "Évoluer la Maîtrise" : "7 boules requises"}
                                 </button>
                             ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest flex items-center gap-2 justify-center sm:justify-start"><CheckCircle2 size={16}/> Maîtrise Saiyan Débloquée</span>}
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <h3 className="text-xs font-mono text-white mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
-                        <Sparkles size={16} /> 4. Capacités Suprêmes (Post-Dieu)
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('scouter') ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-black/60 border-white/20'}`}>
-                            {(() => {
-                                const { ok, reason } = checkPrerequisite('unlock', 'scouter');
-                                return (
-                                    <>
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-5 bg-black/60 rounded-3xl"><Camera size={36} className={state.unlockedFeatures.includes('scouter') ? 'text-emerald-400' : 'text-white/40'}/></div>
-                                            {state.unlockedFeatures.includes('scouter') ? <span className="bg-emerald-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/10 text-white/50 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/10">BLOQUÉ</span>}
-                                        </div>
-                                        <h4 className="font-black text-lg mb-2 uppercase text-white">Mode Scouter</h4>
-                                        <p className="text-[11px] text-white/80 mb-8 leading-relaxed">Vision AR pour les élus de rang Dieu.</p>
-                                        {!state.unlockedFeatures.includes('scouter') && (
-                                            <button onClick={() => handleShenronWish('unlock', true, 'scouter')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && ok ? 'bg-emerald-600 text-white' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}>
-                                                {ok ? "Invoquer" : reason}
-                                            </button>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-
-                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('custom_zone') ? 'bg-blue-500/20 border-blue-500/40' : 'bg-black/60 border-white/20'}`}>
-                            {(() => {
-                                const { ok, reason } = checkPrerequisite('unlock', 'custom_zone');
-                                return (
-                                    <>
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-5 bg-black/60 rounded-3xl"><MapPin size={36} className={state.unlockedFeatures.includes('custom_zone') ? 'text-blue-400' : 'text-white/40'}/></div>
-                                            {state.unlockedFeatures.includes('custom_zone') ? <span className="bg-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/10 text-white/50 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/10">BLOQUÉ</span>}
-                                        </div>
-                                        <h4 className="font-black text-lg mb-2 uppercase text-white">Zone Perso</h4>
-                                        <p className="text-[11px] text-white/80 mb-8 leading-relaxed">Libérez la portée du radar.</p>
-                                        {!state.unlockedFeatures.includes('custom_zone') && (
-                                            <button onClick={() => handleShenronWish('unlock', true, 'custom_zone')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && ok ? 'bg-blue-600 text-white' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}>
-                                                {ok ? "Invoquer" : reason}
-                                            </button>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-
-                        <div className={`p-8 rounded-[2.5rem] border transition-all ${state.unlockedFeatures.includes('world_scan') ? 'bg-indigo-500/20 border-indigo-500/40' : 'bg-black/60 border-white/20'}`}>
-                            {(() => {
-                                const { ok, reason } = checkPrerequisite('unlock', 'world_scan');
-                                return (
-                                    <>
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-5 bg-black/60 rounded-3xl"><Globe size={36} className={state.unlockedFeatures.includes('world_scan') ? 'text-indigo-400' : 'text-white/40'}/></div>
-                                            {state.unlockedFeatures.includes('world_scan') ? <span className="bg-indigo-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full">DÉBLOQUÉ</span> : <span className="bg-white/10 text-white/50 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/10">ULTIME</span>}
-                                        </div>
-                                        <h4 className="font-black text-lg mb-2 uppercase text-white">Vision Planétaire</h4>
-                                        <p className="text-[11px] text-white/80 mb-8 leading-relaxed">Détectez les boules partout sur Terre.</p>
-                                        {!state.unlockedFeatures.includes('world_scan') && (
-                                            <button onClick={() => handleShenronWish('unlock', true, 'world_scan')} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase transition-all ${foundCount === 7 && ok ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}>
-                                                {ok ? "Invoquer" : reason}
-                                            </button>
-                                        )}
-                                    </>
-                                );
-                            })()}
                         </div>
                     </div>
                 </section>
@@ -589,13 +544,17 @@ const App: React.FC = () => {
                     ))}
                   </MapContainer>
                 )}
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setMapTheme(p => p==='dark'?'light':'dark'); }} 
-                  className="absolute top-24 right-14 z-[1001] w-12 h-12 bg-black/80 text-white rounded-full border-2 shadow-2xl flex items-center justify-center active:scale-90 transition-all hover:bg-white/10"
-                  style={{ borderColor: radarColor }}
-                >
-                  {mapTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
+                
+                {/* Contrôles de carte restaurés */}
+                <div className="absolute top-24 right-14 z-[1001] flex flex-col gap-3">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setMapTheme(p => p === 'dark' ? 'light' : 'dark'); }} 
+                    className="w-12 h-12 bg-black/80 text-white rounded-full border-2 shadow-2xl flex items-center justify-center active:scale-90 transition-all hover:bg-white/10"
+                    style={{ borderColor: radarColor }}
+                  >
+                    {mapTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
+                </div>
               </div>
             )}
             
@@ -616,6 +575,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
+        {/* Bouton Retour Radar restauré */}
         {isMapView && (
           <div className="mt-8 flex animate-in fade-in slide-in-from-top-4 duration-300">
             <button 
@@ -629,47 +589,13 @@ const App: React.FC = () => {
         )}
 
         <div className={`${isMapView ? 'mt-12' : 'mt-24'} flex flex-col items-center gap-8 w-full max-w-md transition-all duration-500`}>
-          <div className="w-full space-y-4 px-4">
-             <div className="flex items-center justify-between px-2">
-                <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest flex items-center gap-2">Portée de Scan</span>
-                <span className="text-xs font-black" style={{ color: radarColor }}>{state.range >= 10000 ? 'MONDE' : `${state.range} KM`}</span>
-             </div>
-             <div className="flex flex-wrap justify-center gap-2 w-full">
-                {[1, 10, 100, 1000].map((r) => (
-                    <button key={r} onClick={() => setState(p => ({...p, range: r}))} className={`flex-1 min-w-[60px] py-3 text-[9px] font-black rounded-xl border transition-all ${state.range === r ? 'text-black shadow-lg' : 'bg-black/40 text-white border-white/10'}`} style={{ backgroundColor: state.range === r ? radarColor : undefined, borderColor: state.range === r ? radarColor : undefined }}>
-                        {r}KM
-                    </button>
-                ))}
-                {state.unlockedFeatures.includes('world_scan') && (
-                    <button onClick={() => setState(p => ({...p, range: 20000}))} className={`flex-1 min-w-[60px] py-3 text-[9px] font-black rounded-xl border transition-all ${state.range === 20000 ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-indigo-900/40 text-indigo-200 border-indigo-500/30'}`}>
-                        MONDE
-                    </button>
-                )}
-                {state.unlockedFeatures.includes('custom_zone') && (
-                    <button onClick={() => {
-                        const val = prompt("Entrez la portée en KM (max 10 000) :");
-                        if(val && !isNaN(Number(val)) && Number(val) >= 1) {
-                            const num = Number(val);
-                            if (num > 10000) {
-                                alert("Seul le vœu 'Vision Planétaire' peut percer le voile au-delà de 10 000 km !");
-                                setState(p => ({...p, range: 10000}));
-                            } else {
-                                setState(p => ({...p, range: num}));
-                            }
-                        }
-                    }} className={`flex-1 min-w-[60px] py-3 text-[9px] font-black rounded-xl border transition-all ${state.range > 1000 && state.range <= 10000 ? 'bg-blue-600 text-white' : 'bg-white/5 text-blue-400 border-blue-400/30'}`}>
-                        LIBRE
-                    </button>
-                )}
-             </div>
-          </div>
-
           <button onClick={searchBalls} disabled={state.isLoading || !effectiveCenter} className="w-full py-5 text-white font-black rounded-2xl flex items-center justify-center gap-4 uppercase tracking-[0.15em] disabled:opacity-50 shadow-2xl transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: '#ff7700' }}>
             {state.isLoading ? <RefreshCcw className="animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
             {state.isLoading ? "Analyse..." : "Lancer le Scan"}
           </button>
         </div>
 
+        {/* Bloc de distance restauré */}
         {selectedBall && (
           <div className="mt-10 p-8 bg-black/60 border rounded-[2.5rem] w-full max-w-md backdrop-blur-2xl animate-in slide-in-from-bottom-8 shadow-2xl relative overflow-hidden group" style={{ borderColor: `${radarColor}33` }}>
             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Star size={80}/></div>
