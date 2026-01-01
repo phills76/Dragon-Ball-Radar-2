@@ -339,7 +339,7 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
                             { id: 'bulma', name: 'Original Bulma', color: '#10b981', desc: 'Thème vert classique.', image: 'https://drive.google.com/uc?id=1cJ9gATntST-w6duw9fSBjgDx7ExciGSE' },
-                            { id: 'capsule', name: 'Capsule Corp.', color: '#3b82f6', desc: 'Thème bleu technologique.' },
+                            { id: 'capsule', name: 'Capsule Corp.', color: '#3b82f6', desc: 'Thème bleu technologique.', image: 'https://drive.google.com/uc?id=1wKQ6d8wtzm08IUrAdvfkUsjBhWUWbJGm' },
                             { id: 'saiyan', name: 'Radar Sayen', color: '#fbbf24', desc: 'Thème doré Super Dragon.' },
                             { id: 'namek', name: 'Radar Namek', color: '#4ade80', desc: 'Thème vert alien mystique.' }
                         ].map(d => (
