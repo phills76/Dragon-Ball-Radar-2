@@ -388,7 +388,7 @@ const App: React.FC = () => {
                             { id: 'bulma', name: 'Original Bulma', color: '#10b981', desc: 'Thème vert classique.', image: 'https://drive.google.com/uc?id=1cJ9gATntST-w6duw9fSBjgDx7ExciGSE' },
                             { id: 'capsule', name: 'Capsule Corp.', color: '#3b82f6', desc: 'Thème bleu technologique.', image: 'https://drive.google.com/uc?id=1wKQ6d8wtzm08IUrAdvfkUsjBhWUWbJGm' },
                             { id: 'saiyan', name: 'Radar Sayen', color: '#fbbf24', desc: 'Thème doré Super Dragon.', image: 'https://drive.google.com/uc?id=1QCeNpQhmVG1dshCe491Om-1crUN32UiG' },
-                            { id: 'namek', name: 'Radar Namek', color: '#4ade80', desc: 'Thème vert alien mystique.' }
+                            { id: 'namek', name: 'Radar Namek', color: '#4ade80', desc: 'Thème vert alien mystique.', image: 'https://drive.google.com/uc?id=1FAUY5GwezcaXziLEfdCo69pHtKdItMi4' }
                         ].map(d => (
                             <button key={d.id} onClick={() => handleShenronWish('design', d.id)} className={`p-6 border rounded-[2rem] transition-all flex flex-col items-center text-center group ${state.design === d.id ? 'bg-white/20 border-white scale-105 shadow-xl' : 'bg-black/40 border-white/10 opacity-90 hover:opacity-100 hover:bg-black/60'}`}>
                                 <div className="w-14 h-14 rounded-full mb-5 shadow-2xl transition-transform group-hover:rotate-12 flex items-center justify-center overflow-hidden bg-black/20" style={{ borderColor: d.color }}>
