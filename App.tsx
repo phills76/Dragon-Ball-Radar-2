@@ -7,7 +7,8 @@ import { generateValidCoordinates } from './services/geminiService';
 import RadarUI from './components/RadarUI';
 import { 
   Zap, RefreshCcw, Sun, Moon, Menu as MenuIcon, X, BookOpen, Star, Camera, Shield, 
-  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft, Globe, CheckCircle2
+  Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft, Globe, CheckCircle2,
+  Cpu, ZapOff, Workflow
 } from 'lucide-react';
 
 const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
@@ -31,6 +32,12 @@ const MASTERY_LEVELS = [
   { radius: 0.025, label: 'Cyborg', name: 'Cyborg', req: 'Race Cyborg' },
   { radius: 0.01, label: 'Namek', name: 'Namek', req: 'Race Namek' },
   { radius: 0.001, label: 'Saiyan', name: 'Saiyan', req: 'Race Saiyan' }
+];
+
+const SPECIAL_FEATURES = [
+  { id: 'scouter', name: 'Mode Scouter', icon: <Camera size={20}/>, desc: 'Vision AR des boules', req: 'Race Cyborg' },
+  { id: 'custom_zone', name: 'Zone Perso', icon: <MapPin size={20}/>, desc: 'Scanner n\'importe où', req: 'Mode Scouter' },
+  { id: 'world_scan', name: 'Scan Planétaire', icon: <Globe size={20}/>, desc: 'Portée mondiale (Globe)', req: 'Zone Perso + Race Dieu' }
 ];
 
 const MapAutoView: React.FC<{ center: [number, number], range: number }> = ({ center, range }) => {
@@ -58,7 +65,7 @@ const MapPicker: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({ o
 
 const App: React.FC = () => {
   const [state, setState] = useState<RadarState>(() => {
-    const saved = localStorage.getItem('radar_save_v12');
+    const saved = localStorage.getItem('radar_save_v13');
     const defaultState: RadarState = {
       range: 10,
       userLocation: null,
@@ -86,7 +93,7 @@ const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('radar_save_v12', JSON.stringify(state));
+    localStorage.setItem('radar_save_v13', JSON.stringify(state));
   }, [state]);
 
   useEffect(() => {
@@ -162,9 +169,12 @@ const App: React.FC = () => {
     }
 
     if (type === 'unlock') {
-      if (id === 'scouter') return { ok: state.currentRace === 'Dieu', reason: 'Requis : Race Dieu' };
+      if (id === 'scouter') return { ok: ['Cyborg', 'Namek', 'Démon', 'Saiyan', 'Dieu'].includes(state.currentRace), reason: 'Requis : Race Cyborg' };
       if (id === 'custom_zone') return { ok: state.unlockedFeatures.includes('scouter'), reason: 'Requis : Mode Scouter' };
-      if (id === 'world_scan') return { ok: state.unlockedFeatures.includes('custom_zone'), reason: 'Requis : Zone Perso' };
+      if (id === 'world_scan') return { 
+        ok: state.unlockedFeatures.includes('custom_zone') && state.currentRace === 'Dieu' && state.collectionRadius <= 0.001, 
+        reason: 'Requis : Dieu + Maîtrise Saiyan' 
+      };
     }
 
     return { ok: false, reason: 'Bloqué' };
@@ -340,7 +350,7 @@ const App: React.FC = () => {
                         {[
                             { id: 'bulma', name: 'Original Bulma', color: '#10b981', desc: 'Thème vert classique.', image: 'https://drive.google.com/uc?id=1cJ9gATntST-w6duw9fSBjgDx7ExciGSE' },
                             { id: 'capsule', name: 'Capsule Corp.', color: '#3b82f6', desc: 'Thème bleu technologique.', image: 'https://drive.google.com/uc?id=1wKQ6d8wtzm08IUrAdvfkUsjBhWUWbJGm' },
-                            { id: 'saiyan', name: 'Radar Sayen', color: '#fbbf24', desc: 'Thème doré Super Dragon.' },
+                            { id: 'saiyan', name: 'Radar Sayen', color: '#fbbf24', desc: 'Thème doré Super Dragon.', image: 'https://drive.google.com/uc?id=1QCeNpQhmVG1dshCe491Om-1crUN32UiG' },
                             { id: 'namek', name: 'Radar Namek', color: '#4ade80', desc: 'Thème vert alien mystique.' }
                         ].map(d => (
                             <button key={d.id} onClick={() => handleShenronWish('design', d.id)} className={`p-6 border rounded-[2rem] transition-all flex flex-col items-center text-center group ${state.design === d.id ? 'bg-white/20 border-white scale-105 shadow-xl' : 'bg-black/40 border-white/10 opacity-90 hover:opacity-100 hover:bg-black/60'}`}>
@@ -439,6 +449,39 @@ const App: React.FC = () => {
                                 </button>
                             ) : <span className="text-orange-400 font-black uppercase text-sm tracking-widest flex items-center gap-2 justify-center sm:justify-start"><CheckCircle2 size={16}/> Maîtrise Saiyan Débloquée</span>}
                         </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 className="text-xs font-mono text-white mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <Workflow size={16} /> 4. Capacités Spéciales (Évolutions du Radar)
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {SPECIAL_FEATURES.map(f => {
+                            const { ok, reason } = checkPrerequisite('unlock', f.id);
+                            const isUnlocked = state.unlockedFeatures.includes(f.id);
+
+                            return (
+                                <button 
+                                    key={f.id} 
+                                    onClick={() => handleShenronWish('unlock', '', f.id)} 
+                                    className={`p-6 border rounded-[2rem] transition-all flex flex-col items-center text-center group ${isUnlocked ? 'bg-emerald-500/20 border-emerald-500 shadow-lg' : ok ? 'bg-black/60 border-white/30 hover:bg-black/80' : 'bg-black/80 border-white/5 opacity-50 cursor-not-allowed'}`}
+                                >
+                                    <div className={`w-14 h-14 rounded-full mb-4 flex items-center justify-center border-2 ${isUnlocked ? 'bg-emerald-500 text-white' : 'bg-white/5'}`}>
+                                        {f.icon}
+                                    </div>
+                                    <span className="text-[11px] font-black uppercase mb-1 text-white">{f.name}</span>
+                                    <span className="text-[9px] text-white/60 leading-tight mb-4">{f.desc}</span>
+                                    {isUnlocked ? (
+                                        <span className="text-[8px] font-black text-emerald-400 uppercase">Acquis</span>
+                                    ) : !ok ? (
+                                        <span className="text-[7px] font-mono text-red-400 font-bold uppercase">{reason}</span>
+                                    ) : (
+                                        <span className="text-[8px] font-black text-white uppercase bg-white/10 px-3 py-1 rounded-full">DÉBLOQUER (7★)</span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </section>
              </div>
@@ -545,7 +588,6 @@ const App: React.FC = () => {
                   </MapContainer>
                 )}
                 
-                {/* Contrôles de carte restaurés */}
                 <div className="absolute top-24 right-14 z-[1001] flex flex-col gap-3">
                   <button 
                     onClick={(e) => { e.stopPropagation(); setMapTheme(p => p === 'dark' ? 'light' : 'dark'); }} 
@@ -575,7 +617,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Bouton Retour Radar restauré */}
         {isMapView && (
           <div className="mt-8 flex animate-in fade-in slide-in-from-top-4 duration-300">
             <button 
@@ -588,14 +629,45 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <div className={`${isMapView ? 'mt-12' : 'mt-24'} flex flex-col items-center gap-8 w-full max-w-md transition-all duration-500`}>
+        <div className={`${isMapView ? 'mt-12' : 'mt-24'} flex flex-col items-center gap-6 w-full max-w-md transition-all duration-500`}>
+          
+          {!isMapView && (
+            <div className="w-full space-y-3 px-2">
+              <div className="flex justify-between items-center px-2">
+                <span className="text-[10px] font-mono opacity-40 uppercase tracking-widest">Zone de Recherche</span>
+                <span className="text-[10px] font-mono font-bold uppercase" style={{ color: radarColor }}>
+                  {state.range >= 10000 ? 'Scan Planétaire' : `${state.range} Kilomètres`}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2 p-1.5 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+                {[1, 10, 100, 1000, 10000].map((r) => {
+                  const isPlanet = r === 10000;
+                  const isUnlocked = state.unlockedFeatures.includes('world_scan');
+                  
+                  // On n'affiche le globe que s'il est débloqué
+                  if (isPlanet && !isUnlocked) return null;
+
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setState(prev => ({ ...prev, range: r, scanCenter: null }))}
+                      className={`flex-1 py-3 rounded-xl font-black text-[10px] transition-all flex items-center justify-center ${state.range === r ? 'bg-white text-black shadow-lg scale-105' : 'text-white opacity-40 hover:opacity-100 hover:bg-white/5'}`}
+                      style={{ color: state.range === r ? 'black' : radarColor }}
+                    >
+                      {isPlanet ? <Globe size={14} /> : `${r}K`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <button onClick={searchBalls} disabled={state.isLoading || !effectiveCenter} className="w-full py-5 text-white font-black rounded-2xl flex items-center justify-center gap-4 uppercase tracking-[0.15em] disabled:opacity-50 shadow-2xl transition-all hover:scale-[1.02] active:scale-95" style={{ backgroundColor: '#ff7700' }}>
             {state.isLoading ? <RefreshCcw className="animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
             {state.isLoading ? "Analyse..." : "Lancer le Scan"}
           </button>
         </div>
 
-        {/* Bloc de distance restauré */}
         {selectedBall && (
           <div className="mt-10 p-8 bg-black/60 border rounded-[2.5rem] w-full max-w-md backdrop-blur-2xl animate-in slide-in-from-bottom-8 shadow-2xl relative overflow-hidden group" style={{ borderColor: `${radarColor}33` }}>
             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Star size={80}/></div>
