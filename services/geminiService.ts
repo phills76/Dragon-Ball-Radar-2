@@ -8,7 +8,8 @@ export async function generateValidCoordinates(
   userLoc: UserLocation,
   rangeKm: RadarRange
 ): Promise<DragonBall[]> {
-  const isGlobal = rangeKm >= 10000;
+  // Le scan mondial est désormais à 20 000 km
+  const isGlobal = rangeKm >= 20000;
   
   const prompt = `
     TASK: Find 7 real-world coordinates for a "treasure hunt" game.

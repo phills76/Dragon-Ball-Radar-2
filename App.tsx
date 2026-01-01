@@ -8,7 +8,7 @@ import RadarUI from './components/RadarUI';
 import { 
   Zap, RefreshCcw, Sun, Moon, Menu as MenuIcon, X, BookOpen, Star, Camera, Shield, 
   Wand2, MapPin, Lock, Target, Map, Sparkles, User, Sliders, ArrowLeft, Globe, CheckCircle2,
-  Cpu, ZapOff, Workflow
+  Cpu, ZapOff, Workflow, Keyboard, MousePointer2
 } from 'lucide-react';
 
 const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
@@ -36,14 +36,14 @@ const MASTERY_LEVELS = [
 
 const SPECIAL_FEATURES = [
   { id: 'scouter', name: 'Mode Scouter', icon: <Camera size={20}/>, desc: 'Vision AR des boules', req: 'Race Cyborg' },
-  { id: 'custom_zone', name: 'Zone Perso', icon: <MapPin size={20}/>, desc: 'Scanner n\'importe où', req: 'Mode Scouter' },
-  { id: 'world_scan', name: 'Scan Planétaire', icon: <Globe size={20}/>, desc: 'Portée mondiale (Globe)', req: 'Zone Perso + Race Dieu' }
+  { id: 'custom_zone', name: 'Zone Perso', icon: <Keyboard size={20}/>, desc: 'Saisie clavier de distance', req: 'Mode Scouter' },
+  { id: 'world_scan', name: 'Scan Planétaire', icon: <Globe size={20}/>, desc: 'Portée mondiale (20 000 km)', req: 'Zone Perso + Race Dieu' }
 ];
 
 const MapAutoView: React.FC<{ center: [number, number], range: number }> = ({ center, range }) => {
   const map = useMap();
   const zoomLevel = useMemo(() => {
-    if (range >= 10000) return 2;
+    if (range >= 20000) return 2;
     if (range <= 1) return 15;
     if (range <= 10) return 12;
     if (range <= 100) return 9;
@@ -65,7 +65,7 @@ const MapPicker: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({ o
 
 const App: React.FC = () => {
   const [state, setState] = useState<RadarState>(() => {
-    const saved = localStorage.getItem('radar_save_v13');
+    const saved = localStorage.getItem('radar_save_v14');
     const defaultState: RadarState = {
       range: 10,
       userLocation: null,
@@ -90,10 +90,12 @@ const App: React.FC = () => {
   const [showInstructions, setShowInstructions] = useState(false);
   const [isScouterMode, setIsScouterMode] = useState(false);
   const [isPickingZone, setIsPickingZone] = useState(false);
+  const [showCustomRangeInput, setShowCustomRangeInput] = useState(false);
+  const [customRangeValue, setCustomRangeValue] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('radar_save_v13', JSON.stringify(state));
+    localStorage.setItem('radar_save_v14', JSON.stringify(state));
   }, [state]);
 
   useEffect(() => {
@@ -237,12 +239,22 @@ const App: React.FC = () => {
   }, [selectedBall, state.userLocation]);
 
   const currentRadarRange = useMemo(() => {
-    if (state.range >= 10000) return 20000;
+    if (state.range >= 20000) return 20000;
     const multipliers = [1, 0.5, 0.2, 0.05];
     return state.range * (multipliers[radarStep] || 1);
   }, [state.range, radarStep]);
 
   const isMapView = radarStep === 4;
+
+  const handleCustomRangeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    let val = parseInt(customRangeValue);
+    if (isNaN(val) || val < 1) val = 1;
+    if (val > 10000) val = 10000;
+    setState(prev => ({ ...prev, range: val, scanCenter: null }));
+    setShowCustomRangeInput(false);
+    setCustomRangeValue("");
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 transition-colors duration-1000" style={{ color: radarColor }}>
@@ -256,6 +268,38 @@ const App: React.FC = () => {
                 Ouvrir le Sanctuaire
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Modale Zone Perso (Clavier) */}
+      {showCustomRangeInput && (
+        <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in">
+          <form onSubmit={handleCustomRangeSubmit} className="relative w-full max-w-sm p-10 bg-black/90 border-2 rounded-[3rem] shadow-2xl overflow-hidden" style={{ borderColor: radarColor }}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-current to-transparent opacity-20" style={{ color: radarColor }}></div>
+            <h3 className="text-xl font-black uppercase tracking-widest text-center mb-8" style={{ color: radarColor }}>Zone Perso</h3>
+            <div className="relative mb-8">
+              <input 
+                type="number" 
+                autoFocus
+                value={customRangeValue}
+                onChange={(e) => setCustomRangeValue(e.target.value)}
+                placeholder="Ex: 126"
+                className="w-full bg-black/50 border-2 border-white/10 rounded-2xl py-6 px-6 text-2xl font-black text-white text-center focus:outline-none focus:border-white transition-all"
+                max={10000}
+                min={1}
+              />
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-mono opacity-40">KM</span>
+            </div>
+            <div className="space-y-4">
+              <button type="submit" className="w-full py-4 bg-white text-black font-black rounded-2xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest">
+                Valider
+              </button>
+              <button type="button" onClick={() => setShowCustomRangeInput(false)} className="w-full py-4 bg-white/5 text-white/40 font-black rounded-2xl hover:bg-white/10 transition-all uppercase tracking-widest text-xs">
+                Annuler
+              </button>
+            </div>
+            <p className="mt-6 text-[9px] font-mono text-center opacity-30 uppercase tracking-[0.2em]">Max: 10 000 km</p>
+          </form>
         </div>
       )}
 
@@ -300,13 +344,6 @@ const App: React.FC = () => {
                 <button onClick={() => { toggleScouter(); setIsMenuOpen(false); }} className="w-full flex items-center gap-4 p-5 rounded-2xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 group">
                     <div className="p-3 bg-black/40 rounded-xl group-hover:scale-110 transition-transform"><Camera size={24} /></div>
                     <span className="font-black text-sm uppercase">Mode Scouter</span>
-                </button>
-              )}
-
-              {state.unlockedFeatures.includes('custom_zone') && (
-                <button onClick={() => { setIsPickingZone(true); setIsMenuOpen(false); setRadarStep(4); }} className="w-full flex items-center gap-4 p-5 rounded-2xl border bg-blue-500/10 border-blue-500/30 text-blue-400 group">
-                    <div className="p-3 bg-black/40 rounded-xl group-hover:scale-110 transition-transform"><MapPin size={24} /></div>
-                    <span className="font-black text-sm uppercase">Zone Perso</span>
                 </button>
               )}
 
@@ -558,14 +595,14 @@ const App: React.FC = () => {
                 <RadarUI range={currentRadarRange} userLoc={effectiveCenter} balls={state.dragonBalls} onBallClick={setSelectedBall} design={state.design} />
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm pointer-events-none animate-in fade-in slide-in-from-bottom-2">
                    <p className="text-[10px] font-black tracking-widest uppercase flex items-center gap-2">
-                      <Target size={10} /> ÉCHELLE: {state.range >= 10000 ? 'PLANÉTAIRE' : `${currentRadarRange.toFixed(currentRadarRange < 1 ? 2 : 1)} KM`}
+                      <Target size={10} /> ÉCHELLE: {state.range >= 20000 ? 'PLANÉTAIRE' : `${currentRadarRange.toFixed(currentRadarRange < 1 ? 2 : 1)} KM`}
                    </p>
                 </div>
               </>
             ) : (
               <div className={`w-full h-full relative ${mapTheme === 'dark' ? 'radar-theme' : ''}`}>
                 {effectiveCenter && (
-                  <MapContainer center={[effectiveCenter.lat, effectiveCenter.lng]} zoom={state.range >= 10000 ? 2 : 12} zoomControl={false} className="h-full w-full">
+                  <MapContainer center={[effectiveCenter.lat, effectiveCenter.lng]} zoom={state.range >= 20000 ? 2 : 12} zoomControl={false} className="h-full w-full">
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapAutoView center={[effectiveCenter.lat, effectiveCenter.lng]} range={state.range} />
                     {isPickingZone && (
@@ -636,25 +673,40 @@ const App: React.FC = () => {
               <div className="flex justify-between items-center px-2">
                 <span className="text-[10px] font-mono opacity-40 uppercase tracking-widest">Zone de Recherche</span>
                 <span className="text-[10px] font-mono font-bold uppercase" style={{ color: radarColor }}>
-                  {state.range >= 10000 ? 'Scan Planétaire' : `${state.range} Kilomètres`}
+                  {state.range >= 20000 ? 'Scan Planétaire' : `${state.range} Kilomètres`}
                 </span>
               </div>
               <div className="flex justify-between gap-2 p-1.5 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-                {[1, 10, 100, 1000, 10000].map((r) => {
-                  const isPlanet = r === 10000;
-                  const isUnlocked = state.unlockedFeatures.includes('world_scan');
-                  
-                  // On n'affiche le globe que s'il est débloqué
-                  if (isPlanet && !isUnlocked) return null;
+                {[1, 10, 100, 1000, 'perso', 20000].map((r) => {
+                  if (r === 'perso') {
+                    const isUnlocked = state.unlockedFeatures.includes('custom_zone');
+                    if (!isUnlocked) return null;
+                    return (
+                      <button
+                        key="perso"
+                        onClick={() => setShowCustomRangeInput(true)}
+                        className="flex-1 py-3 rounded-xl font-black text-[10px] transition-all flex items-center justify-center text-white opacity-40 hover:opacity-100 hover:bg-white/5 group"
+                        style={{ color: radarColor }}
+                      >
+                        <Keyboard size={14} className="group-hover:scale-110 transition-transform" />
+                      </button>
+                    );
+                  }
+
+                  const isPlanet = r === 20000;
+                  const isUnlockedPlanet = state.unlockedFeatures.includes('world_scan');
+                  if (isPlanet && !isUnlockedPlanet) return null;
+
+                  const rangeVal = r as number;
 
                   return (
                     <button
-                      key={r}
-                      onClick={() => setState(prev => ({ ...prev, range: r, scanCenter: null }))}
-                      className={`flex-1 py-3 rounded-xl font-black text-[10px] transition-all flex items-center justify-center ${state.range === r ? 'bg-white text-black shadow-lg scale-105' : 'text-white opacity-40 hover:opacity-100 hover:bg-white/5'}`}
-                      style={{ color: state.range === r ? 'black' : radarColor }}
+                      key={rangeVal}
+                      onClick={() => setState(prev => ({ ...prev, range: rangeVal, scanCenter: null }))}
+                      className={`flex-1 py-3 rounded-xl font-black text-[10px] transition-all flex items-center justify-center ${state.range === rangeVal ? 'bg-white text-black shadow-lg scale-105' : 'text-white opacity-40 hover:opacity-100 hover:bg-white/5'}`}
+                      style={{ color: state.range === rangeVal ? 'black' : radarColor }}
                     >
-                      {isPlanet ? <Globe size={14} /> : `${r}K`}
+                      {isPlanet ? <Globe size={14} /> : `${rangeVal}K`}
                     </button>
                   );
                 })}
