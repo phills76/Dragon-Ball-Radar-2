@@ -27,15 +27,15 @@ const RADAR_DESIGNS_LIST = [
 
 const RACES_DATA = [
   { id: 'Terrien', radius: 0.05, label: 'les Terriens', wishId: 'race_terrien', distWishId: 'dist_terrien' },
-  { id: 'Namek', radius: 0.15, label: 'Les Nameks', wishId: 'race_namek', distWishId: 'dist_namek' },
-  { id: 'Kaio', radius: 0.3, label: 'Les Kaioshins et les Kaios', wishId: 'race_kaio', distWishId: 'dist_kaio' },
-  { id: 'Cyborg', radius: 0.6, label: 'Les Cyborgs', wishId: 'race_cyborg', distWishId: 'dist_cyborg' },
-  { id: 'Majin', radius: 1.2, label: 'Les Sorciers, Majins et Démons', wishId: 'race_majin', distWishId: 'dist_majin' },
-  { id: 'Froid', radius: 3.0, label: 'Les démons du Froid', wishId: 'race_froid', distWishId: 'dist_froid' },
-  { id: 'Saiyan', radius: 7.0, label: 'Les Saiyans', wishId: 'race_saiyan', distWishId: 'dist_saiyan' },
-  { id: 'Hakaishin', radius: 15.0, label: 'Les Dieux de la Destructions', wishId: 'race_hakaishin', distWishId: 'dist_hakaishin' },
-  { id: 'Ange', radius: 40.0, label: 'Les Anges', wishId: 'race_ange', distWishId: 'dist_ange' },
-  { id: 'Zeno', radius: 100.0, label: 'Zeno', wishId: 'race_zeno', distWishId: 'dist_zeno' }
+  { id: 'Namek', radius: 0.04, label: 'Les Nameks', wishId: 'race_namek', distWishId: 'dist_namek' },
+  { id: 'Kaio', radius: 0.035, label: 'Les Kaioshins et les Kaios', wishId: 'race_kaio', distWishId: 'dist_kaio' },
+  { id: 'Cyborg', radius: 0.03, label: 'Les Cyborgs', wishId: 'race_cyborg', distWishId: 'dist_cyborg' },
+  { id: 'Majin', radius: 0.025, label: 'Les Sorciers, Majins et Démons', wishId: 'race_majin', distWishId: 'dist_majin' },
+  { id: 'Froid', radius: 0.02, label: 'Les démons du Froid', wishId: 'race_froid', distWishId: 'dist_froid' },
+  { id: 'Saiyan', radius: 0.015, label: 'Les Saiyans', wishId: 'race_saiyan', distWishId: 'dist_saiyan' },
+  { id: 'Hakaishin', radius: 0.01, label: 'Les Dieux de la Destructions', wishId: 'race_hakaishin', distWishId: 'dist_hakaishin' },
+  { id: 'Ange', radius: 0.005, label: 'Les Anges', wishId: 'race_ange', distWishId: 'dist_ange' },
+  { id: 'Zeno', radius: 0.001, label: 'Zeno', wishId: 'race_zeno', distWishId: 'dist_zeno' }
 ];
 
 const MapAutoView: React.FC<{ center: UserLocation, range: number, target: DragonBall | null }> = ({ center, range, target }) => {
