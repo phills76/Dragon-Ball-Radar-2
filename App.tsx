@@ -281,9 +281,9 @@ const App: React.FC = () => {
                  </button>
                </div>
 
-               <header className="flex flex-col gap-2 mb-10 py-4 px-4">
+               <header className="flex flex-col gap-2 mb-10 py-6 px-8 bg-black/60 backdrop-blur-md border border-white/10 rounded-[2.5rem] shadow-2xl">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-black text-yellow-500 uppercase flex items-center gap-4"><Wand2 /> Sanctuaire Sacré</h2>
+                    <h2 className="text-2xl font-black text-yellow-500 uppercase flex items-center gap-4 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]"><Wand2 /> Sanctuaire Sacré</h2>
                   </div>
                   {!hasSevenBalls ? (
                     <div className="flex items-center gap-2 text-[10px] font-black uppercase text-orange-400 animate-pulse">
