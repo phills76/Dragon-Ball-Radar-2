@@ -19,7 +19,7 @@ const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
 });
 
 const RADAR_DESIGNS_LIST = [
-  { id: 'bulma' as const, name: 'Bulma Classic', color: '#AAFFAA', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-bulma.png' },
+  { id: 'bulma' as const, name: 'Bulma Classic', color: '#AAFFAA', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/home-page/radar-bulma.png' },
   { id: 'capsule' as const, name: 'Capsule Corp', color: '#3b82f6', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-capsule-corp1.png' },
   { id: 'saiyan' as const, name: 'SAIYAN', color: '#fbbf24', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-saiyan1.png' },
   { id: 'namek' as const, name: 'NAMEK', color: '#4ade80', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-namek1.png' }
@@ -202,8 +202,9 @@ const App: React.FC = () => {
     return isUnlocked(currentRace.wishId);
   };
 
-  const canUnlockTech = () => isUnlocked('dist_namek');
+  const canUnlockTech = () => isUnlocked('race_zeno') && isUnlocked('dist_zeno');
   const canUnlockScouter = () => isUnlocked('tech_custom_zone');
+  const canUnlockWorldScan = () => isUnlocked('tech_scouter');
   const allProgressionsUnlocked = RACES_DATA.every(r => isUnlocked(r.wishId) && isUnlocked(r.distWishId));
 
   const radarColor = RADAR_DESIGNS_LIST.find(d => d.id === state.design)?.color || '#AAFFAA';
@@ -361,7 +362,7 @@ const App: React.FC = () => {
 
                   <section>
                       <h3 className="text-xs font-mono text-white/50 mb-6 uppercase tracking-[0.3em] border-l-2 pl-4 flex items-center gap-2" style={{ borderColor: radarColor }}>
-                          <Cpu size={14}/> 04. Technologie (Condition : Namek)
+                          <Cpu size={14}/> 04. Technologie (Condition : ZENO)
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div className={`md:col-span-2 p-6 bg-black/60 border rounded-[2rem] flex flex-col gap-4 backdrop-blur-sm transition-all ${canUnlockTech() ? 'border-white/10' : 'border-white/5 opacity-40 grayscale'}`}>
@@ -378,8 +379,8 @@ const App: React.FC = () => {
                               {canUnlockScouter() ? (!hasSevenBalls && !isUnlocked('tech_scouter') ? <Lock size={24} className="text-orange-500 animate-pulse" /> : <Camera size={24} className="text-emerald-400"/>) : <Lock size={24} className="text-white/20"/>}
                               <span className="block font-black uppercase text-xs text-emerald-400">Mode Scouter (AR)</span>
                           </button>
-                          <button disabled={!allProgressionsUnlocked || (!hasSevenBalls && !isUnlocked('tech_world_scan'))} onClick={() => handleShenronWish('world_scan', null, 'tech_world_scan')} className={`p-6 border rounded-[2rem] transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-sm ${allProgressionsUnlocked ? 'bg-black/60 border-white/10 hover:border-orange-500' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}>
-                              {allProgressionsUnlocked ? (!hasSevenBalls && !isUnlocked('tech_world_scan') ? <Lock size={24} className="text-orange-500 animate-pulse" /> : <Globe size={24} className="text-orange-400"/>) : <Lock size={24} className="text-white/20"/>}
+                          <button disabled={!canUnlockWorldScan() || (!hasSevenBalls && !isUnlocked('tech_world_scan'))} onClick={() => handleShenronWish('world_scan', null, 'tech_world_scan')} className={`p-6 border rounded-[2rem] transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-sm ${canUnlockWorldScan() ? 'bg-black/60 border-white/10 hover:border-orange-500' : 'bg-black/40 border-white/5 opacity-40 grayscale'}`}>
+                              {canUnlockWorldScan() ? (!hasSevenBalls && !isUnlocked('tech_world_scan') ? <Lock size={24} className="text-orange-500 animate-pulse" /> : <Globe size={24} className="text-orange-400"/>) : <Lock size={24} className="text-white/20"/>}
                               <span className="block font-black uppercase text-xs text-orange-400">Scan Planétaire (20k km)</span>
                           </button>
                       </div>
