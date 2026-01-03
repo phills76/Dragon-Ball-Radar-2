@@ -271,10 +271,19 @@ const App: React.FC = () => {
           
           <div className="relative w-full max-w-4xl bg-black/10 border-2 rounded-[3rem] p-8 max-h-[90vh] overflow-y-auto shadow-2xl z-20 backdrop-blur-[2px]" style={{ borderColor: `${radarColor}44` }}>
              <div className="relative z-10">
-               <header className="flex flex-col gap-2 mb-10 sticky top-0 bg-black/40 backdrop-blur-md py-4 z-10 border border-white/5 rounded-2xl px-4">
+               {/* Fixed Close Button */}
+               <div className="sticky top-0 z-50 flex justify-end p-2 pointer-events-none">
+                 <button 
+                   onClick={() => setShowWishes(false)} 
+                   className="p-2 hover:bg-white/20 rounded-full text-white bg-black/40 backdrop-blur-md border border-white/10 pointer-events-auto shadow-xl transition-all active:scale-90"
+                 >
+                   <X size={24}/>
+                 </button>
+               </div>
+
+               <header className="flex flex-col gap-2 mb-10 py-4 px-4">
                   <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-black text-yellow-500 uppercase flex items-center gap-4"><Wand2 /> Sanctuaire Sacré</h2>
-                    <button onClick={() => setShowWishes(false)} className="p-2 hover:bg-white/10 rounded-full text-white"><X size={24}/></button>
                   </div>
                   {!hasSevenBalls ? (
                     <div className="flex items-center gap-2 text-[10px] font-black uppercase text-orange-400 animate-pulse">
