@@ -16,20 +16,24 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
 
   const designs = {
     bulma: { 
-      main: '#10b981', 
-      glow: 'rgba(16, 185, 129, 0.3)'
+      main: '#AAFFAA', 
+      glow: 'rgba(170, 255, 170, 0.63)',
+      bg: '#185826' // Fond vert rétro iconique
     },
     capsule: { 
       main: '#3b82f6', 
-      glow: 'rgba(59, 130, 246, 0.3)' 
+      glow: 'rgba(59, 130, 246, 0.3)',
+      bg: null
     },
     saiyan: { 
       main: '#fbbf24', 
-      glow: 'rgba(251, 191, 36, 0.3)' 
+      glow: 'rgba(251, 191, 36, 0.3)',
+      bg: null
     },
     namek: { 
       main: '#4ade80', 
-      glow: 'rgba(74, 222, 128, 0.3)' 
+      glow: 'rgba(74, 222, 128, 0.3)',
+      bg: null
     }
   };
 
@@ -46,10 +50,16 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
   };
 
   return (
-    <div className="relative w-full h-full radar-bg overflow-hidden flex items-center justify-center" style={{ '--radar-color': currentDesign.main } as any}>
-      {/* Grille de détection (Superposée) */}
-      <div className="absolute inset-0 grid grid-cols-6 grid-rows-6 pointer-events-none opacity-20 z-10">
-        {Array.from({ length: 36 }).map((_, i) => (
+    <div 
+      className={`relative w-full h-full overflow-hidden flex items-center justify-center ${!currentDesign.bg ? 'radar-bg' : ''}`} 
+      style={{ 
+        backgroundColor: currentDesign.bg || undefined,
+        '--radar-color': currentDesign.main 
+      } as any}
+    >
+      {/* Grille de détection (Superposée) - Passage en 12x12 */}
+      <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 pointer-events-none opacity-20 z-10">
+        {Array.from({ length: 144 }).map((_, i) => (
           <div key={i} className="border-[0.5px]" style={{ borderColor: currentDesign.main }}></div>
         ))}
       </div>
@@ -69,8 +79,12 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
       {/* Position de l'utilisateur (Curseur) */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
         <div className="relative">
-            <div className="absolute inset-0 bg-white/20 rounded-full animate-ping scale-150"></div>
-            <Navigation2 className="text-white w-6 h-6 fill-white drop-shadow-[0_0_8px_white]" />
+            <div className={`absolute inset-0 rounded-full animate-ping scale-150 ${design === 'bulma' ? 'bg-[#ff7700]/30' : 'bg-white/20'}`}></div>
+            {design === 'bulma' ? (
+              <div className="w-4 h-4 bg-[#ff7700] rounded-full shadow-[0_0_12px_#ff7700] border border-white/30"></div>
+            ) : (
+              <Navigation2 className="text-white w-6 h-6 fill-white drop-shadow-[0_0_8px_white]" />
+            )}
         </div>
       </div>
 

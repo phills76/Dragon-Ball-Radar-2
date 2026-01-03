@@ -14,7 +14,7 @@ export interface UserLocation {
   accuracy: number;
 }
 
-export type RadarRange = number; // Changé de type fixe à number pour la zone personnalisée
+export type RadarRange = number;
 export type RadarDesign = 'bulma' | 'capsule' | 'saiyan' | 'namek';
 
 export interface RadarState {
@@ -25,7 +25,7 @@ export interface RadarState {
   isLoading: boolean;
   error: string | null;
   design: RadarDesign;
-  collectionRadius: number; // en km (0.05 = 50m)
-  unlockedFeatures: string[]; // 'scouter', 'custom_zone'
+  collectionRadius: number; 
+  unlockedFeatures: string[]; 
   currentRace: string;
 }
