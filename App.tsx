@@ -19,7 +19,7 @@ const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
 });
 
 const RADAR_DESIGNS_LIST = [
-  { id: 'bulma' as const, name: 'Bulma Classic', color: '#AAFFAA', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/home-page/radar-bulma.png' },
+  { id: 'bulma' as const, name: 'Bulma Classic', color: '#AAFFAA', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-bulma.png' },
   { id: 'capsule' as const, name: 'Capsule Corp', color: '#3b82f6', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-capsule-corp1.png' },
   { id: 'saiyan' as const, name: 'SAIYAN', color: '#fbbf24', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-saiyan1.png' },
   { id: 'namek' as const, name: 'NAMEK', color: '#4ade80', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-namek1.png' }
@@ -202,9 +202,11 @@ const App: React.FC = () => {
     return isUnlocked(currentRace.wishId);
   };
 
+  // Hierarchy Logic
   const canUnlockTech = () => isUnlocked('race_zeno') && isUnlocked('dist_zeno');
   const canUnlockScouter = () => isUnlocked('tech_custom_zone');
   const canUnlockWorldScan = () => isUnlocked('tech_scouter');
+  
   const allProgressionsUnlocked = RACES_DATA.every(r => isUnlocked(r.wishId) && isUnlocked(r.distWishId));
 
   const radarColor = RADAR_DESIGNS_LIST.find(d => d.id === state.design)?.color || '#AAFFAA';
