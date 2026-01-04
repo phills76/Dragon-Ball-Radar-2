@@ -14,16 +14,21 @@ interface RadarUIProps {
 const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, design }) => {
   if (!userLoc) return null;
 
-  const designs = {
+  const designs: Record<RadarDesign, { main: string; glow: string; bg: string | null }> = {
     bulma: { 
       main: '#AAFFAA', 
       glow: 'rgba(170, 255, 170, 0.63)',
-      bg: '#185826' // Fond vert rétro iconique
+      bg: '#185826' 
     },
     capsule: { 
       main: '#3b82f6', 
       glow: 'rgba(59, 130, 246, 0.3)',
       bg: null
+    },
+    red_ribbon: { 
+      main: '#ef4444', 
+      glow: 'rgba(239, 68, 68, 0.4)',
+      bg: '#310000' 
     },
     saiyan: { 
       main: '#fbbf24', 
@@ -34,6 +39,21 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
       main: '#4ade80', 
       glow: 'rgba(74, 222, 128, 0.3)',
       bg: null
+    },
+    frieza: { 
+      main: '#a855f7', 
+      glow: 'rgba(168, 85, 247, 0.4)',
+      bg: '#1e0030'
+    },
+    cell: { 
+      main: '#4ade80', 
+      glow: 'rgba(74, 222, 128, 0.3)',
+      bg: '#052c16'
+    },
+    majin: { 
+      main: '#ec4899', 
+      glow: 'rgba(236, 72, 153, 0.4)',
+      bg: '#33001a'
     }
   };
 
@@ -57,7 +77,7 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
         '--radar-color': currentDesign.main 
       } as any}
     >
-      {/* Grille de détection (Superposée) - Passage en 12x12 */}
+      {/* Grille de détection */}
       <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 pointer-events-none opacity-20 z-10">
         {Array.from({ length: 144 }).map((_, i) => (
           <div key={i} className="border-[0.5px]" style={{ borderColor: currentDesign.main }}></div>
@@ -76,7 +96,7 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
         background: `linear-gradient(to right, transparent 50%, ${currentDesign.glow} 100%)` 
       }}></div>
 
-      {/* Position de l'utilisateur (Curseur) */}
+      {/* Position de l'utilisateur */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
         <div className="relative">
             <div className={`absolute inset-0 rounded-full animate-ping scale-150 ${design === 'bulma' ? 'bg-[#ff7700]/30' : 'bg-white/20'}`}></div>
@@ -91,7 +111,6 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
       {/* Dragon Balls détectées */}
       {balls.map((ball) => {
         const { x, y } = getRelativePos(ball.lat, ball.lng);
-        // On ne dessine que si c'est dans le radar
         const distFromCenter = Math.sqrt(Math.pow(x-50, 2) + Math.pow(y-50, 2));
         if (distFromCenter > 50) return null;
 

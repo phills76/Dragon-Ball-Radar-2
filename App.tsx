@@ -20,9 +20,13 @@ const createDragonBallIcon = (stars: number, found: boolean) => L.divIcon({
 
 const RADAR_DESIGNS_LIST = [
   { id: 'bulma' as const, name: 'Bulma Classic', color: '#AAFFAA', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-bulma.png' },
-  { id: 'capsule' as const, name: 'Capsule Corp', color: '#3b82f6', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-capsule-corp1.png' },
-  { id: 'saiyan' as const, name: 'SAIYAN', color: '#fbbf24', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-saiyan1.png' },
-  { id: 'namek' as const, name: 'NAMEK', color: '#4ade80', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-namek1.png' }
+  { id: 'capsule' as const, name: 'Capsule Corp.', color: '#3b82f6', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-capsule-corp1.png' },
+  { id: 'red_ribbon' as const, name: "l'Armée du Ruban Rouge", color: '#ef4444', icon: '' },
+  { id: 'saiyan' as const, name: 'Saiyan', color: '#fbbf24', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-saiyan1.png' },
+  { id: 'namek' as const, name: 'Namek', color: '#4ade80', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-namek1.png' },
+  { id: 'frieza' as const, name: 'Freezer', color: '#a855f7', icon: '' },
+  { id: 'cell' as const, name: 'Cell/Cyborgs', color: '#065f46', icon: '' },
+  { id: 'majin' as const, name: 'Majin', color: '#ec4899', icon: '' }
 ];
 
 const RACES_DATA = [
@@ -202,13 +206,10 @@ const App: React.FC = () => {
     return isUnlocked(currentRace.wishId);
   };
 
-  // Hierarchy Logic
   const canUnlockTech = () => isUnlocked('race_zeno') && isUnlocked('dist_zeno');
   const canUnlockScouter = () => isUnlocked('tech_custom_zone');
   const canUnlockWorldScan = () => isUnlocked('tech_scouter');
   
-  const allProgressionsUnlocked = RACES_DATA.every(r => isUnlocked(r.wishId) && isUnlocked(r.distWishId));
-
   const radarColor = RADAR_DESIGNS_LIST.find(d => d.id === state.design)?.color || '#AAFFAA';
 
   const currentDistToSelected = useMemo(() => {
@@ -271,7 +272,6 @@ const App: React.FC = () => {
           
           <div className="relative w-full max-w-4xl bg-black/10 border-2 rounded-[3rem] p-8 max-h-[90vh] overflow-y-auto shadow-2xl z-20 backdrop-blur-[2px]" style={{ borderColor: `${radarColor}44` }}>
              <div className="relative z-10">
-               {/* Fixed Close Button */}
                <div className="sticky top-0 z-50 flex justify-end p-2 pointer-events-none">
                  <button 
                    onClick={() => setShowWishes(false)} 

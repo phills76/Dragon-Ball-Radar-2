@@ -15,7 +15,7 @@ export interface UserLocation {
 }
 
 export type RadarRange = number;
-export type RadarDesign = 'bulma' | 'capsule' | 'saiyan' | 'namek';
+export type RadarDesign = 'bulma' | 'capsule' | 'red_ribbon' | 'saiyan' | 'namek' | 'frieza' | 'cell' | 'majin';
 
 export interface RadarState {
   range: RadarRange;
