@@ -54,6 +54,21 @@ const RadarUI: React.FC<RadarUIProps> = ({ range, userLoc, balls, onBallClick, d
       main: '#ec4899', 
       glow: 'rgba(236, 72, 153, 0.4)',
       bg: '#33001a'
+    },
+    hakaishin: { 
+      main: '#a855f7', 
+      glow: 'rgba(168, 85, 247, 0.6)',
+      bg: '#12001f' 
+    },
+    angel: { 
+      main: '#38bdf8', 
+      glow: 'rgba(56, 189, 248, 0.5)',
+      bg: '#001a2c' 
+    },
+    zeno: { 
+      main: '#f472b6', 
+      glow: 'rgba(244, 114, 182, 0.6)',
+      bg: '#1a001a' 
     }
   };
 

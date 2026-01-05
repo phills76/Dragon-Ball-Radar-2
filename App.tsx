@@ -26,7 +26,10 @@ const RADAR_DESIGNS_LIST = [
   { id: 'namek' as const, name: 'Namek', color: '#4ade80', icon: 'https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/images-radar-sanctuaires-voeux/radar-namek1.png' },
   { id: 'frieza' as const, name: 'Freezer', color: '#a855f7', icon: '' },
   { id: 'cell' as const, name: 'Cell/Cyborgs', color: '#065f46', icon: '' },
-  { id: 'majin' as const, name: 'Majin', color: '#ec4899', icon: '' }
+  { id: 'majin' as const, name: 'Majin', color: '#ec4899', icon: '' },
+  { id: 'hakaishin' as const, name: 'Hakaishin', color: '#a855f7', icon: '' },
+  { id: 'angel' as const, name: 'Ange', color: '#38bdf8', icon: '' },
+  { id: 'zeno' as const, name: 'Zeno', color: '#f472b6', icon: '' }
 ];
 
 const RACES_DATA = [
