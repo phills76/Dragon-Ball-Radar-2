@@ -270,7 +270,7 @@ const App: React.FC = () => {
           next.currentArcIndex = nextIdx;
           if (!next.unlockedArcIndexes.includes(nextIdx)) next.unlockedArcIndexes.push(nextIdx);
         }
-      } else if (wish === 'feature') {
+      } else if (wish === 'scouter') {
         next.unlockedFeatures.push('scouter');
       } else if (wish === 'range_10k') {
         next.unlockedFeatures.push('range_10k');
