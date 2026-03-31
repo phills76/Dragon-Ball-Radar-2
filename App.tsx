@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import { RadarState, DragonBall, UserLocation, RadarArc, Character, CharacterGroup } from './types';
-import { generateValidCoordinates } from './services/geminiService';
+import { generateValidCoordinates } from './services/overpassService';
 import RadarUI from './components/RadarUI';
 import { ARCS_DATA, UI_TITLES, DEBUG_FLAGS, COOLDOWN_DURATION } from './config';
 import { 
@@ -85,6 +85,87 @@ const CharacterBadge: React.FC<{ char: Character, isUnlocked: boolean, radarColo
   );
 };
 
+const ScouterAROverlay: React.FC<{ 
+  heading: number, 
+  userLoc: UserLocation, 
+  balls: DragonBall[], 
+  radarColor: string,
+  isSimulated: boolean,
+  onHeadingChange: (h: number) => void
+}> = ({ heading, userLoc, balls, radarColor, isSimulated, onHeadingChange }) => {
+  const FOV = 60;
+  
+  const getBearing = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const y = Math.sin((lon2 - lon1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+    const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+              Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos((lon2 - lon1) * Math.PI / 180);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+
+  return (
+    <div className="fixed inset-0 z-10 pointer-events-none overflow-hidden flex items-center justify-center">
+      {isSimulated && (
+        <div className="absolute inset-0 opacity-20" style={{ 
+          backgroundImage: `linear-gradient(${radarColor}44 1px, transparent 1px), linear-gradient(90deg, ${radarColor}44 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }}></div>
+      )}
+
+      {balls.map(ball => {
+        const bearing = getBearing(userLoc.lat, userLoc.lng, ball.lat, ball.lng);
+        let diff = bearing - heading;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+
+        if (Math.abs(diff) > FOV / 2) return null;
+
+        const xPos = (diff / (FOV / 2)) * 50 + 50;
+        const dist = calculateDistance(userLoc.lat, userLoc.lng, ball.lat, ball.lng);
+        const scale = Math.max(0.4, 1.2 - dist / 0.5); 
+
+        return (
+          <div 
+            key={ball.id}
+            className="absolute transition-all duration-75 flex flex-col items-center"
+            style={{ 
+              left: `${xPos}%`, 
+              transform: `translate(-50%, -50%) scale(${scale})`,
+              top: '50%'
+            }}
+          >
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center border-4 shadow-[0_0_30px_rgba(251,146,60,0.8)] ${ball.found ? 'bg-gray-500 border-gray-400' : 'bg-orange-500 border-yellow-400'}`}>
+              <span className="text-2xl font-black text-white">{ball.stars}★</span>
+            </div>
+            <div className="mt-3 px-4 py-1.5 bg-black/70 rounded-full border border-white/20 text-[12px] font-black text-white whitespace-nowrap backdrop-blur-md">
+              {dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(2)}km`}
+            </div>
+          </div>
+        );
+      })}
+
+      {isSimulated && (
+        <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-72 p-5 bg-black/80 rounded-[2rem] border-2 border-white/10 pointer-events-auto backdrop-blur-xl shadow-2xl">
+          <div className="flex justify-between text-[9px] font-black uppercase mb-3 tracking-widest opacity-60">
+            <span style={{ color: radarColor }}>Simulation Tactique</span>
+            <span style={{ color: radarColor }}>{heading.toFixed(0)}°</span>
+          </div>
+          <input 
+            type="range" min="0" max="360" value={heading} 
+            onChange={(e) => onHeadingChange(parseInt(e.target.value))}
+            className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-orange-500"
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const flattenChars = (groups: CharacterGroup[]) => groups.flatMap(g => g.list);
   const getAllChars = useMemo(() => ARCS_DATA.flatMap(a => flattenChars(a.characters)), []);
@@ -131,6 +212,7 @@ const App: React.FC = () => {
   const [openBookSaga, setOpenBookSaga] = useState<number | null>(null);
   const [isScouterMode, setIsScouterMode] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [deviceHeading, setDeviceHeading] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Vérification périodique du cooldown pour désactiver les boules
@@ -138,6 +220,18 @@ const App: React.FC = () => {
     if (!state.lastWishTimestamp) return false;
     return Date.now() - state.lastWishTimestamp < COOLDOWN_DURATION;
   }, [state.lastWishTimestamp]);
+
+  useEffect(() => {
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      const heading = (e as any).webkitCompassHeading || (360 - (e.alpha || 0));
+      if (heading !== undefined) setDeviceHeading(heading);
+    };
+
+    if (isScouterMode && !DEBUG_FLAGS.IS_DEV_MODE) {
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+    return () => window.removeEventListener('deviceorientation', handleOrientation);
+  }, [isScouterMode]);
 
   useEffect(() => {
     if (!DEBUG_FLAGS.IS_DEV_MODE) {
@@ -253,7 +347,7 @@ const App: React.FC = () => {
     }
   }, [state.userLocation, state.dragonBalls, state.activeCharacterPoint, currentArc.radius, state.currentArcIndex, isCooldownActive]);
 
-  const handleWish = (wish: 'restart' | 'next_radar' | 'feature' | 'range_10k' | 'range_world') => {
+  const handleWish = (wish: 'restart' | 'next_radar' | 'scouter' | 'range_10k' | 'range_world') => {
     setState(prev => {
       let next = { 
         ...prev, 
@@ -287,11 +381,18 @@ const App: React.FC = () => {
 
   const toggleScouter = async () => {
     if (!isScouterMode) {
+      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        try { await (DeviceOrientationEvent as any).requestPermission(); } catch (e) {}
+      }
+      
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         if (videoRef.current) videoRef.current.srcObject = stream;
         setIsScouterMode(true);
-      } catch (err) { alert("Caméra bloquée."); }
+      } catch (err) { 
+        if (DEBUG_FLAGS.IS_DEV_MODE) setIsScouterMode(true);
+        else alert("Caméra bloquée."); 
+      }
     } else {
       (videoRef.current?.srcObject as MediaStream)?.getTracks().forEach(t => t.stop());
       setIsScouterMode(false);
@@ -338,6 +439,27 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 bg-transparent relative z-10" style={{ color: radarColor }}>
+      {isScouterMode && (
+        <>
+          <video ref={videoRef} autoPlay playsInline className="fixed inset-0 w-full h-full object-cover z-[-1]" />
+          {state.userLocation && (
+            <ScouterAROverlay 
+              heading={deviceHeading} 
+              userLoc={state.userLocation} 
+              balls={state.dragonBalls} 
+              radarColor={radarColor}
+              isSimulated={DEBUG_FLAGS.IS_DEV_MODE}
+              onHeadingChange={setDeviceHeading}
+            />
+          )}
+          <button 
+            onClick={toggleScouter} 
+            className="fixed top-6 right-6 z-[2000] p-4 bg-red-600/80 hover:bg-red-600 text-white rounded-full shadow-2xl backdrop-blur-md border border-white/20 transition-all active:scale-90"
+          >
+            <X size={32} />
+          </button>
+        </>
+      )}
       <div className={`fixed inset-0 z-[-5] transition-opacity duration-1000 ${showWishes ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundImage: `url('https://cdn.jsdelivr.net/gh/phills76/images-dragon-ball-radar2/sanctuaire-voeux-page/dragon-voeux-page.png')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}><div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div></div>
 
       {!showWishes && (
@@ -362,179 +484,183 @@ const App: React.FC = () => {
             </div>
           </header>
 
-          <DragonBallInventory balls={state.dragonBalls} radarColor={radarColor} />
+          {!isScouterMode && (
+            <>
+              <DragonBallInventory balls={state.dragonBalls} radarColor={radarColor} />
 
-          <main className="w-full flex-1 flex flex-col items-center max-w-md relative">
-            <div 
-              onClick={() => setRadarStep(p => (p + 1) % 5)} 
-              className="relative w-full aspect-square cursor-pointer active:scale-95 transition-transform mb-6"
-            >
-              <div className="absolute inset-0 rounded-full border-[12px] border-zinc-900 z-30 pointer-events-none ring-1 ring-white/10 shadow-2xl"></div>
-              <div className="absolute inset-0 rounded-full overflow-hidden bg-black z-10">
-                {radarStep < 4 ? (
-                  <RadarUI 
-                    range={actualRange * [1, 0.5, 0.25, 0.1][radarStep]} 
-                    userLoc={state.userLocation} 
-                    balls={state.dragonBalls} 
-                    activeCharacterPoint={state.activeCharacterPoint}
-                    onBallClick={setSelectedBall} 
-                    arc={currentArc} 
-                    lastWishTimestamp={state.lastWishTimestamp}
-                  />
-                ) : (
-                  <div 
-                    className={`w-full h-full ${isDarkMode ? 'map-dark-mode' : ''}`}
-                    onClick={(e) => e.stopPropagation()} 
-                  >
-                    <div className="absolute top-[4rem] right-[5rem] z-[1100]">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setIsDarkMode(!isDarkMode); }} 
-                        className="w-11 h-11 flex items-center justify-center rounded-full border bg-black/60 backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-all active:scale-90"
-                        style={{ borderColor: `${radarColor}88`, color: radarColor }}
+              <main className="w-full flex-1 flex flex-col items-center max-w-md relative">
+                <div 
+                  onClick={() => setRadarStep(p => (p + 1) % 5)} 
+                  className="relative w-full aspect-square cursor-pointer active:scale-95 transition-transform mb-6"
+                >
+                  <div className="absolute inset-0 rounded-full border-[12px] border-zinc-900 z-30 pointer-events-none ring-1 ring-white/10 shadow-2xl"></div>
+                  <div className="absolute inset-0 rounded-full overflow-hidden bg-black z-10">
+                    {radarStep < 4 ? (
+                      <RadarUI 
+                        range={actualRange * [1, 0.5, 0.25, 0.1][radarStep]} 
+                        userLoc={state.userLocation} 
+                        balls={state.dragonBalls} 
+                        activeCharacterPoint={state.activeCharacterPoint}
+                        onBallClick={setSelectedBall} 
+                        arc={currentArc} 
+                        lastWishTimestamp={state.lastWishTimestamp}
+                      />
+                    ) : (
+                      <div 
+                        className={`w-full h-full ${isDarkMode ? 'map-dark-mode' : ''}`}
+                        onClick={(e) => e.stopPropagation()} 
                       >
-                        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                      </button>
-                    </div>
+                        <div className="absolute top-[4rem] right-[5rem] z-[1100]">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setIsDarkMode(!isDarkMode); }} 
+                            className="w-11 h-11 flex items-center justify-center rounded-full border bg-black/60 backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-all active:scale-90"
+                            style={{ borderColor: `${radarColor}88`, color: radarColor }}
+                          >
+                            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                          </button>
+                        </div>
 
-                    {state.userLocation && (
-                      <MapContainer center={[state.userLocation.lat, state.userLocation.lng]} zoom={15} zoomControl={false} className="h-full w-full">
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <MapAutoView center={state.userLocation} target={selectedBall} />
-                        <Circle center={[state.userLocation.lat, state.userLocation.lng]} radius={actualRange * 1000} pathOptions={{ color: '#ff7700', fillOpacity: 0.1, weight: 1 }} />
-                        <Marker position={[state.userLocation.lat, state.userLocation.lng]} icon={L.divIcon({ html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white animate-pulse"></div>', className: '' })} />
-                        {state.dragonBalls.map(b => (
-                          <Marker key={b.id} position={[b.lat, b.lng]} icon={createDragonBallIcon(b.stars, b.found)} eventHandlers={{ click: (e) => { setSelectedBall(b); } }} />
-                        ))}
-                        {state.activeCharacterPoint && (
-                          <Marker position={[state.activeCharacterPoint.lat, state.activeCharacterPoint.lng]} icon={createWarriorIcon()} />
+                        {state.userLocation && (
+                          <MapContainer center={[state.userLocation.lat, state.userLocation.lng]} zoom={15} zoomControl={false} className="h-full w-full">
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <MapAutoView center={state.userLocation} target={selectedBall} />
+                            <Circle center={[state.userLocation.lat, state.userLocation.lng]} radius={actualRange * 1000} pathOptions={{ color: '#ff7700', fillOpacity: 0.1, weight: 1 }} />
+                            <Marker position={[state.userLocation.lat, state.userLocation.lng]} icon={L.divIcon({ html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white animate-pulse"></div>', className: '' })} />
+                            {state.dragonBalls.map(b => (
+                              <Marker key={b.id} position={[b.lat, b.lng]} icon={createDragonBallIcon(b.stars, b.found)} eventHandlers={{ click: (e) => { setSelectedBall(b); } }} />
+                            ))}
+                            {state.activeCharacterPoint && (
+                              <Marker position={[state.activeCharacterPoint.lat, state.activeCharacterPoint.lng]} icon={createWarriorIcon()} />
+                            )}
+                          </MapContainer>
                         )}
-                      </MapContainer>
-                    )}
-                    <button onClick={(e) => { e.stopPropagation(); setRadarStep(0); }} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] p-4 bg-black/60 rounded-full border border-white/20 text-white flex items-center gap-2 text-[10px] font-black uppercase shadow-2xl backdrop-blur-md"><ArrowLeft size={18} /> {UI_TITLES.BACK_TO_RADAR}</button>
-                  </div>
-                )}
-                {hasSevenBalls && (
-                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 animate-in zoom-in">
-                    <button onClick={e => { e.stopPropagation(); setShowShenron(true); }} className="p-10 bg-yellow-500 rounded-full animate-bounce shadow-[0_0_50px_gold]"><Star size={50} fill="black" /></button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {selectedBall && (
-              <div className="w-full px-4 mb-4 animate-in slide-in-from-bottom duration-300">
-                <div className="flex items-center gap-3 bg-black/60 backdrop-blur-2xl border rounded-full py-2.5 px-4 shadow-xl overflow-hidden" style={{ borderColor: `${radarColor}44` }}>
-                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center border transition-all ${selectedBall.found ? 'bg-zinc-800 border-zinc-700' : 'bg-orange-500 border-yellow-400 ring-2 ring-yellow-400/20 shadow-[0_0_10px_rgba(251,146,60,0.5)]'}`}>
-                    <span className="text-[10px] font-black text-white">{selectedBall.stars}★</span>
-                  </div>
-                  <div className="flex flex-1 items-center justify-between min-w-0">
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[7px] font-black uppercase text-white/40 tracking-widest leading-none mb-0.5">{UI_TITLES.TARGET_LABEL}</span>
-                      <span className="text-[9px] text-white font-bold truncate leading-none">{selectedBall.name || 'Coordonnées'}</span>
-                    </div>
-                    <div className="flex flex-col items-end flex-shrink-0 ml-4">
-                      <span className="text-[7px] font-black uppercase text-white/40 tracking-widest leading-none mb-0.5">{UI_TITLES.DISTANCE_LABEL}</span>
-                      <span className="text-[9px] text-white font-black leading-none">{getBallDistance(selectedBall)}</span>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedBall(null)} className="ml-2 p-1.5 hover:bg-white/10 rounded-full text-white/30 hover:text-white transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="w-full px-4 space-y-4 mb-6">
-              <div className="grid grid-cols-5 gap-1.5">
-                {rangeOptions.map(opt => {
-                  const isUnlocked = !opt.feature || state.unlockedFeatures.includes(opt.feature);
-                  const isActive = state.range === opt.value;
-                  return (
-                    <button 
-                      key={opt.value} 
-                      disabled={!isUnlocked}
-                      onClick={() => isUnlocked && setState(p => ({ ...p, range: opt.value }))} 
-                      className={`relative py-3 rounded-xl border font-black uppercase transition-all flex flex-col items-center justify-center gap-1 ${
-                        !isUnlocked 
-                        ? 'bg-black/20 border-white/5 text-white/10 opacity-30 grayscale cursor-not-allowed' 
-                        : isActive 
-                        ? 'bg-white/20 border-white text-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                        : 'bg-black/40 border-white/10 text-white/40 hover:bg-white/5'
-                      }`}
-                    >
-                      <span className={`text-center leading-[1.1] ${opt.label.length > 10 ? 'text-[6px]' : 'text-[7px]'}`}>
-                        {opt.label}
-                      </span>
-                      {!isUnlocked && <Lock size={8} className="text-white/20" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {state.range === 10000 && (
-                <div className="animate-in zoom-in-95 duration-300 p-5 bg-black/60 rounded-[2rem] border-2 border-white/10 backdrop-blur-xl shadow-2xl">
-                   <div className="flex flex-col mb-4 px-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[8px] font-black uppercase opacity-60 tracking-[0.4em]">Terminal Capsule Corp</span>
-                        <span className="text-[8px] font-mono text-white/20">v4.2-RANGE</span>
+                        <button onClick={(e) => { e.stopPropagation(); setRadarStep(0); }} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] p-4 bg-black/60 rounded-full border border-white/20 text-white flex items-center gap-2 text-[10px] font-black uppercase shadow-2xl backdrop-blur-md"><ArrowLeft size={18} /> {UI_TITLES.BACK_TO_RADAR}</button>
                       </div>
-                      <div className="mt-2 py-3 px-4 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase italic" style={{ color: radarColor }}>Distance</span>
-                        <div className="flex items-baseline gap-1">
-                          <span className={`text-2xl font-black italic glow-text ${state.customRange === 0 ? 'animate-pulse opacity-40' : ''}`} style={{ color: radarColor }}>
-                            {state.customRange.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] font-black" style={{ color: radarColor }}>KM</span>
+                    )}
+                    {hasSevenBalls && (
+                      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 animate-in zoom-in">
+                        <button onClick={e => { e.stopPropagation(); setShowShenron(true); }} className="p-10 bg-yellow-500 rounded-full animate-bounce shadow-[0_0_50px_gold]"><Star size={50} fill="black" /></button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedBall && (
+                  <div className="w-full px-4 mb-4 animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-3 bg-black/60 backdrop-blur-2xl border rounded-full py-2.5 px-4 shadow-xl overflow-hidden" style={{ borderColor: `${radarColor}44` }}>
+                      <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center border transition-all ${selectedBall.found ? 'bg-zinc-800 border-zinc-700' : 'bg-orange-500 border-yellow-400 ring-2 ring-yellow-400/20 shadow-[0_0_10px_rgba(251,146,60,0.5)]'}`}>
+                        <span className="text-[10px] font-black text-white">{selectedBall.stars}★</span>
+                      </div>
+                      <div className="flex flex-1 items-center justify-between min-w-0">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[7px] font-black uppercase text-white/40 tracking-widest leading-none mb-0.5">{UI_TITLES.TARGET_LABEL}</span>
+                          <span className="text-[9px] text-white font-bold truncate leading-none">{selectedBall.name || 'Coordonnées'}</span>
+                        </div>
+                        <div className="flex flex-col items-end flex-shrink-0 ml-4">
+                          <span className="text-[7px] font-black uppercase text-white/40 tracking-widest leading-none mb-0.5">{UI_TITLES.DISTANCE_LABEL}</span>
+                          <span className="text-[9px] text-white font-black leading-none">{getBallDistance(selectedBall)}</span>
                         </div>
                       </div>
-                   </div>
+                      <button onClick={() => setSelectedBall(null)} className="ml-2 p-1.5 hover:bg-white/10 rounded-full text-white/30 hover:text-white transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                   <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                <div className="w-full px-4 space-y-4 mb-6">
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {rangeOptions.map(opt => {
+                      const isUnlocked = !opt.feature || state.unlockedFeatures.includes(opt.feature);
+                      const isActive = state.range === opt.value;
+                      return (
                         <button 
-                          key={num} 
-                          onClick={() => handleDigit(num)}
-                          className="py-4 bg-white/5 border border-white/10 rounded-xl text-xl font-black text-white hover:bg-white/10 active:scale-90 transition-all shadow-inner"
+                          key={opt.value} 
+                          disabled={!isUnlocked}
+                          onClick={() => isUnlocked && setState(p => ({ ...p, range: opt.value }))} 
+                          className={`relative py-3 rounded-xl border font-black uppercase transition-all flex flex-col items-center justify-center gap-1 ${
+                            !isUnlocked 
+                            ? 'bg-black/20 border-white/5 text-white/10 opacity-30 grayscale cursor-not-allowed' 
+                            : isActive 
+                            ? 'bg-white/20 border-white text-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+                            : 'bg-black/40 border-white/10 text-white/40 hover:bg-white/5'
+                          }`}
                         >
-                          {num}
+                          <span className={`text-center leading-[1.1] ${opt.label.length > 10 ? 'text-[6px]' : 'text-[7px]'}`}>
+                            {opt.label}
+                          </span>
+                          {!isUnlocked && <Lock size={8} className="text-white/20" />}
                         </button>
-                      ))}
-                      <button 
-                        onClick={handleClear}
-                        className="py-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs font-black text-red-500 hover:bg-red-500/20 active:scale-90 transition-all uppercase"
-                      >
-                        CLR
-                      </button>
-                      <button 
-                        onClick={() => handleDigit(0)}
-                        className="py-4 bg-white/5 border border-white/10 rounded-xl text-xl font-black text-white hover:bg-white/10 active:scale-90 transition-all shadow-inner"
-                      >
-                        0
-                      </button>
-                      <button 
-                        onClick={handleBackstep}
-                        className="py-4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
-                      >
-                        <Delete size={20} />
-                      </button>
-                   </div>
-                   
-                   <p className="mt-4 text-[7px] text-center font-black uppercase text-white/30 tracking-[0.2em]">
-                      Min: 100 KM / Max: 10 000 KM
-                   </p>
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
 
-              <button 
-                onClick={searchBalls} 
-                disabled={state.isLoading || !state.userLocation || isCooldownActive} 
-                className={`w-full py-7 rounded-2xl font-black uppercase tracking-[0.5em] shadow-2xl flex items-center justify-center gap-4 active:scale-[0.98] transition-all disabled:opacity-50 ${isCooldownActive ? 'bg-zinc-800 text-white/30' : 'bg-orange-500 text-white'}`}
-              >
-                {state.isLoading ? <RefreshCcw className="animate-spin" /> : isCooldownActive ? <Hourglass size={20} className="animate-pulse" /> : <Zap className="fill-current w-6 h-6" />}
-                {state.isLoading ? UI_TITLES.SCAN_BUTTON_LOADING : isCooldownActive ? UI_TITLES.SCAN_BUTTON_COOLDOWN : UI_TITLES.SCAN_BUTTON_IDLE}
-              </button>
-            </div>
-          </main>
+                  {state.range === 10000 && (
+                    <div className="animate-in zoom-in-95 duration-300 p-5 bg-black/60 rounded-[2rem] border-2 border-white/10 backdrop-blur-xl shadow-2xl">
+                       <div className="flex flex-col mb-4 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[8px] font-black uppercase opacity-60 tracking-[0.4em]">Terminal Capsule Corp</span>
+                            <span className="text-[8px] font-mono text-white/20">v4.2-RANGE</span>
+                          </div>
+                          <div className="mt-2 py-3 px-4 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase italic" style={{ color: radarColor }}>Distance</span>
+                            <div className="flex items-baseline gap-1">
+                              <span className={`text-2xl font-black italic glow-text ${state.customRange === 0 ? 'animate-pulse opacity-40' : ''}`} style={{ color: radarColor }}>
+                                {state.customRange.toLocaleString()}
+                              </span>
+                              <span className="text-[10px] font-black" style={{ color: radarColor }}>KM</span>
+                            </div>
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-3 gap-2">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                            <button 
+                              key={num} 
+                              onClick={() => handleDigit(num)}
+                              className="py-4 bg-white/5 border border-white/10 rounded-xl text-xl font-black text-white hover:bg-white/10 active:scale-90 transition-all shadow-inner"
+                            >
+                              {num}
+                            </button>
+                          ))}
+                          <button 
+                            onClick={handleClear}
+                            className="py-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs font-black text-red-500 hover:bg-red-500/20 active:scale-90 transition-all uppercase"
+                          >
+                            CLR
+                          </button>
+                          <button 
+                            onClick={() => handleDigit(0)}
+                            className="py-4 bg-white/5 border border-white/10 rounded-xl text-xl font-black text-white hover:bg-white/10 active:scale-90 transition-all shadow-inner"
+                          >
+                            0
+                          </button>
+                          <button 
+                            onClick={handleBackstep}
+                            className="py-4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
+                          >
+                            <Delete size={20} />
+                          </button>
+                       </div>
+                       
+                       <p className="mt-4 text-[7px] text-center font-black uppercase text-white/30 tracking-[0.2em]">
+                          Min: 100 KM / Max: 10 000 KM
+                       </p>
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={searchBalls} 
+                    disabled={state.isLoading || !state.userLocation || isCooldownActive} 
+                    className={`w-full py-7 rounded-2xl font-black uppercase tracking-[0.5em] shadow-2xl flex items-center justify-center gap-4 active:scale-[0.98] transition-all disabled:opacity-50 ${isCooldownActive ? 'bg-zinc-800 text-white/30' : 'bg-orange-500 text-white'}`}
+                  >
+                    {state.isLoading ? <RefreshCcw className="animate-spin" /> : isCooldownActive ? <Hourglass size={20} className="animate-pulse" /> : <Zap className="fill-current w-6 h-6" />}
+                    {state.isLoading ? UI_TITLES.SCAN_BUTTON_LOADING : isCooldownActive ? UI_TITLES.SCAN_BUTTON_COOLDOWN : UI_TITLES.SCAN_BUTTON_IDLE}
+                  </button>
+                </div>
+              </main>
+            </>
+          )}
         </>
       )}
 

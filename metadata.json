@@ -1,5 +1,5 @@
 {
-  "name": "Dragon Ball Radar - personnages Dragon Ball - GitHub",
+  "name": "Dragon Ball Radar - API Overpass - 2 - GitHub",
   "description": "A high-tech Dragon Ball tracker using your real-world location. Find the 7 Dragon Balls hidden in your area while avoiding private properties and water.",
   "requestFramePermissions": [
     "geolocation",
